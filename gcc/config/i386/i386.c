@@ -25611,7 +25611,23 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
   if (SIBLING_CALL_P (insn))
     {
       if (direct_p)
-	xasm = "%!jmp\t%P0";
+	{
+	  if (!SYMBOL_REF_LOCAL_P (call_op)
+	      && !flag_plt
+	      && !flag_pic
+	      && TARGET_ELF)
+	    {
+	      /* Avoid PLT.  */
+	      if (TARGET_64BIT)
+		xasm = "%!jmp\t*%p0@GOTPCREL(%%rip)";
+	      else if (HAVE_AS_INDIRECT_BRANCH_VIA_GOT)
+		xasm = "%!jmp\t*%p0@GOT";
+	      else
+		xasm = "%!jmp\t%P0";
+	    }
+	  else
+	    xasm = "%!jmp\t%P0";
+	}
       /* SEH epilogue detection requires the indirect branch case
 	 to include REX.W.  */
       else if (TARGET_SEH)
@@ -25654,7 +25670,23 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
     }
 
   if (direct_p)
-    xasm = "%!call\t%P0";
+    {
+      if (!SYMBOL_REF_LOCAL_P (call_op)
+	  && !flag_plt
+	  && !flag_pic
+	  && TARGET_ELF)
+	{
+	  /* Avoid PLT.  */
+	  if (TARGET_64BIT)
+	    xasm = "%!call\t*%p0@GOTPCREL(%%rip)";
+	  else if (HAVE_AS_INDIRECT_BRANCH_VIA_GOT)
+	    xasm = "%!call\t*%p0@GOT";
+	  else
+	    xasm = "%!call\t%P0";
+	}
+      else
+	xasm = "%!call\t%P0";
+    }
   else
     xasm = "%!call\t%A0";
 

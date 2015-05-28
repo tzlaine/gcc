@@ -3953,7 +3953,7 @@ foo:	nop
       [AC_DEFINE(HAVE_AS_IX86_DIFF_SECT_DELTA, 1,
         [Define if your assembler supports the subtraction of symbols in different sections.])])
 
-    # These two are used unconditionally by i386.[ch]; it is to be defined
+    # These three are used unconditionally by i386.[ch]; it is to be defined
     # to 1 if the feature is present, 0 otherwise.
     as_ix86_gotoff_in_data_opt=
     if test x$gas = xyes; then
@@ -3970,6 +3970,23 @@ foo:	nop
     AC_DEFINE_UNQUOTED(HAVE_AS_GOTOFF_IN_DATA,
       [`if test $gcc_cv_as_ix86_gotoff_in_data = yes; then echo 1; else echo 0; fi`],
       [Define true if the assembler supports '.long foo@GOTOFF'.])
+
+    as_ix86_indirect_branch_via_got_opt=
+    if test x$gas = xyes; then
+      as_ix86_indirect_branch_via_got_opt="--32"
+    fi
+    gcc_GAS_CHECK_FEATURE([call *foo@GOT],
+      gcc_cv_as_ix86_indirect_branch_via_got, [2,26,0],
+      [$as_ix86_indirect_branch_via_got_opt],
+[	.text
+	call *foo@GOT],
+	[if test x$gcc_cv_readelf != x \
+	 && $gcc_cv_readelf -r conftest.o | grep R_386_ | grep -v R_386_GOT32 > /dev/null 2>&1; then
+	   gcc_cv_as_ix86_indirect_branch_via_got=yes
+	 fi])
+    AC_DEFINE_UNQUOTED(HAVE_AS_INDIRECT_BRANCH_VIA_GOT,
+      [`if test x"$gcc_cv_as_ix86_indirect_branch_via_got" = xyes; then echo 1; else echo 0; fi`],
+      [Define 0/1 if the assembler supports 'call *foo@GOT'.])
 
     gcc_GAS_CHECK_FEATURE([rep and lock prefix],
         gcc_cv_as_ix86_rep_lock_prefix,,,

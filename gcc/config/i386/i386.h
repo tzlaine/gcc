@@ -584,6 +584,8 @@ extern tree x86_mfence;
 /* This is re-defined by cygming.h.  */
 #define TARGET_PECOFF 0
 
+#define TARGET_ELF (!TARGET_MACHO && !TARGET_SEH && !TARGET_PECOFF)
+
 /* The default abi used by target.  */
 #define DEFAULT_ABI SYSV_ABI
 
