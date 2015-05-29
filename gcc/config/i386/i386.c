@@ -13426,6 +13426,19 @@ ix86_validate_address_register (rtx op)
   return NULL_RTX;
 }
 
+/* Return true if address RTL ADDR should be PIC.  */
+
+static bool
+ix86_pic_address_p (rtx addr)
+{
+  return (!flag_plt
+	  && TARGET_ELF
+	  && (TARGET_64BIT || HAVE_AS_INDIRECT_BRANCH_VIA_GOT)
+	  && GET_CODE (addr) == SYMBOL_REF
+	  && SYMBOL_REF_FUNCTION_P (addr)
+	  && !SYMBOL_REF_LOCAL_P (addr));
+}
+
 /* Recognizes RTL expressions that are valid memory addresses for an
    instruction.  The MODE argument is the machine mode for the MEM
    expression that wants to use this address.
@@ -13515,6 +13528,11 @@ ix86_legitimate_address_p (machine_mode, rtx addr, bool strict)
 	     used.  While ABI specify also 32bit relocations, we don't produce
 	     them at all and use IP relative instead.  */
 	  case UNSPEC_GOT:
+	    gcc_assert (flag_pic
+			|| ix86_pic_address_p (XVECEXP (XEXP (disp, 0),
+							0, 0)));
+	    goto is_legitimate_pic;
+
 	  case UNSPEC_GOTOFF:
 	    gcc_assert (flag_pic);
 	    if (!TARGET_64BIT)
@@ -13524,6 +13542,11 @@ ix86_legitimate_address_p (machine_mode, rtx addr, bool strict)
 	    return false;
 
 	  case UNSPEC_GOTPCREL:
+	    gcc_assert (flag_pic
+			|| ix86_pic_address_p (XVECEXP (XEXP (disp, 0),
+							0, 0)));
+	    goto is_legitimate_pic;
+
 	  case UNSPEC_PCREL:
 	    gcc_assert (flag_pic);
 	    goto is_legitimate_pic;
@@ -13788,7 +13811,8 @@ legitimize_pic_address (rtx orig, rtx reg)
 	  new_rtx = gen_rtx_CONST (Pmode, new_rtx);
 	  if (TARGET_64BIT)
 	    new_rtx = force_reg (Pmode, new_rtx);
-	  new_rtx = gen_rtx_PLUS (Pmode, pic_offset_table_rtx, new_rtx);
+	  if (pic_offset_table_rtx)
+	    new_rtx = gen_rtx_PLUS (Pmode, pic_offset_table_rtx, new_rtx);
 	  new_rtx = gen_const_mem (Pmode, new_rtx);
 	  set_mem_alias_set (new_rtx, ix86_GOT_alias_set ());
 
@@ -16129,7 +16153,12 @@ ix86_print_operand_address (FILE *file, rtx addr)
 	    fputs ("ds:", file);
 	  fprintf (file, HOST_WIDE_INT_PRINT_DEC, INTVAL (disp));
 	}
-      else if (flag_pic)
+      else if (flag_pic
+	       || (GET_CODE (disp) == CONST
+		   && GET_CODE (XEXP (disp, 0)) == UNSPEC
+		   && (XINT (XEXP (disp, 0), 1) == UNSPEC_GOTPCREL
+		       || XINT (XEXP (disp, 0), 1) == UNSPEC_GOT)
+		   && ix86_pic_address_p (XVECEXP (XEXP (disp, 0), 0, 0))))
 	output_pic_addr_const (file, disp, 0);
       else
 	output_addr_const (file, disp);
@@ -17338,6 +17367,9 @@ ix86_expand_move (machine_mode mode, rtx operands[])
 	}
     }
 
+  if (ix86_pic_address_p (op1))
+    goto pic_address;
+
   if ((flag_pic || MACHOPIC_INDIRECT)
       && symbolic_operand (op1, mode))
     {
@@ -17381,6 +17413,7 @@ ix86_expand_move (machine_mode mode, rtx operands[])
 	    op1 = force_reg (mode, op1);
 	  else if (!(TARGET_64BIT && x86_64_movabs_operand (op1, DImode)))
 	    {
+pic_address:
 	      rtx reg = can_create_pseudo_p () ? NULL_RTX : op0;
 	      op1 = legitimize_pic_address (op1, reg);
 	      if (op0 == op1)
@@ -42015,6 +42048,7 @@ ix86_rtx_costs (rtx x, int code_i, int outer_code_i, int opno, int *total,
   enum rtx_code outer_code = (enum rtx_code) outer_code_i;
   machine_mode mode = GET_MODE (x);
   const struct processor_costs *cost = speed ? ix86_cost : &ix86_size_cost;
+  bool pic_p = flag_pic || ix86_pic_address_p (x);
 
   switch (code)
     {
@@ -42035,7 +42069,7 @@ ix86_rtx_costs (rtx x, int code_i, int outer_code_i, int opno, int *total,
 	*total = 3;
       else if (TARGET_64BIT && !x86_64_zext_immediate_operand (x, VOIDmode))
 	*total = 2;
-      else if (flag_pic && SYMBOLIC_CONST (x)
+      else if (pic_p && SYMBOLIC_CONST (x)
 	       && !(TARGET_64BIT
 		    && (GET_CODE (x) == LABEL_REF
 			|| (GET_CODE (x) == SYMBOL_REF
@@ -42082,7 +42116,7 @@ ix86_rtx_costs (rtx x, int code_i, int outer_code_i, int opno, int *total,
       /* Fall back to (MEM (SYMBOL_REF)), since that's where
 	 it'll probably end up.  Add a penalty for size.  */
       *total = (COSTS_N_INSNS (1)
-		+ (flag_pic != 0 && !TARGET_64BIT)
+		+ (pic_p && !TARGET_64BIT)
 		+ (mode == SFmode ? 0 : mode == DFmode ? 1 : 2));
       return true;
 
