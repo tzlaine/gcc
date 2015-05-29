@@ -1090,7 +1090,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #endif
 
 #ifndef LEGITIMATE_PIC_OPERAND_P
-#define LEGITIMATE_PIC_OPERAND_P(X) 1
+#define LEGITIMATE_PIC_OPERAND_P(X) !flag_pic
 #endif
 
 #ifndef TARGET_MEM_CONSTRAINT

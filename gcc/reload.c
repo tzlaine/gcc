@@ -3442,7 +3442,6 @@ find_reloads (rtx_insn *insn, int replace, int ind_levels, int live_known,
 			/* A SCRATCH is not a valid operand.  */
 			&& GET_CODE (operand) != SCRATCH
 			&& (! CONSTANT_P (operand)
-			    || ! flag_pic
 			    || LEGITIMATE_PIC_OPERAND_P (operand))
 			&& (GENERAL_REGS == ALL_REGS
 			    || !REG_P (operand)

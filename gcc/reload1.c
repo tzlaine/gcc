@@ -4213,8 +4213,7 @@ init_eliminable_invariants (rtx_insn *first, bool do_subregs)
 	    continue;
 
 	  /* If flag_pic and we have constant, verify it's legitimate.  */
-	  if (!CONSTANT_P (x)
-	      || !flag_pic || LEGITIMATE_PIC_OPERAND_P (x))
+	  if (!CONSTANT_P (x) || LEGITIMATE_PIC_OPERAND_P (x))
 	    {
 	      /* It can happen that a REG_EQUIV note contains a MEM
 		 that is not a legitimate memory operand.  As later
