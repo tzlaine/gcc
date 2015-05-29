@@ -13189,6 +13189,9 @@ legitimate_pic_operand_p (rtx x)
 {
   rtx inner;
 
+  if (!flag_pic && !ix86_pic_address_p (x))
+    return true;
+
   switch (GET_CODE (x))
     {
     case CONST:
@@ -13428,7 +13431,7 @@ ix86_validate_address_register (rtx op)
 
 /* Return true if address RTL ADDR should be PIC.  */
 
-static bool
+bool
 ix86_pic_address_p (rtx addr)
 {
   return (!flag_plt

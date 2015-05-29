@@ -147,6 +147,8 @@
       /* TLS symbols are not constant.  */
       if (SYMBOL_REF_TLS_MODEL (op))
 	return false;
+      if (ix86_pic_address_p (op))
+	return false;
       return (ix86_cmodel == CM_SMALL || ix86_cmodel == CM_KERNEL
 	      || (ix86_cmodel == CM_MEDIUM && !SYMBOL_REF_FAR_ADDR_P (op)));
 
@@ -186,6 +188,8 @@
 	    case SYMBOL_REF:
 	      /* TLS symbols are not constant.  */
 	      if (SYMBOL_REF_TLS_MODEL (op1))
+		return false;
+	      if (ix86_pic_address_p (op))
 		return false;
 	      /* For CM_SMALL assume that latest object is 16MB before
 		 end of 31bits boundary.  We may also accept pretty
@@ -257,6 +261,8 @@
       /* TLS symbols are not constant.  */
       if (SYMBOL_REF_TLS_MODEL (op))
 	return false;
+      if (ix86_pic_address_p (op))
+	return false;
       return (ix86_cmodel == CM_SMALL
 	      || (ix86_cmodel == CM_MEDIUM
 		  && !SYMBOL_REF_FAR_ADDR_P (op)));
@@ -280,6 +286,8 @@
 	    case SYMBOL_REF:
 	      /* TLS symbols are not constant.  */
 	      if (SYMBOL_REF_TLS_MODEL (op1))
+		return false;
+	      if (ix86_pic_address_p (op))
 		return false;
 	      /* For small code model we may accept pretty large positive
 		 offsets, since one bit is available for free.  Negative
