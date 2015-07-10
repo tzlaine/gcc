@@ -2556,7 +2556,7 @@ static const struct ptt processor_target_table[PROCESSOR_max] =
   {"i386", &i386_cost, 4, 3, 4, 3, 4},
   {"i486", &i486_cost, 16, 15, 16, 15, 16},
   {"pentium", &pentium_cost, 16, 7, 16, 7, 16},
-  {"iamcu", &iamcu_cost, 16, 7, 16, 7, 16},
+  {"iamcu", &iamcu_cost, 0, 0, 0, 0, 0},
   {"pentiumpro", &pentiumpro_cost, 16, 15, 16, 10, 16},
   {"pentium4", &pentium4_cost, 0, 0, 0, 0, 0},
   {"nocona", &nocona_cost, 0, 0, 0, 0, 0},
