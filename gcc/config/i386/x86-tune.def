@@ -292,7 +292,7 @@ DEF_TUNE (X86_TUNE_USE_CLTD, "use_cltd",
 /* X86_TUNE_USE_BT: Enable use of BT (bit test) instructions.  */
 DEF_TUNE (X86_TUNE_USE_BT, "use_bt",
           m_CORE_ALL | m_BONNELL | m_SILVERMONT | m_KNL | m_INTEL
-	  | m_AMD_MULTIPLE | m_GENERIC)
+	  | m_IAMCU | m_AMD_MULTIPLE | m_GENERIC)
 
 /*****************************************************************************/
 /* 387 instruction selection tuning                                          */
