@@ -448,7 +448,7 @@ DEF_TUNE (X86_TUNE_SHIFT1, "shift1", ~m_486)
 /* X86_TUNE_ZERO_EXTEND_WITH_AND: Use AND instruction instead
    of mozbl/movwl.  */
 DEF_TUNE (X86_TUNE_ZERO_EXTEND_WITH_AND, "zero_extend_with_and",
-	  m_486 | m_PENT | m_IAMCU)
+	  m_486 | m_PENT)
 
 /* X86_TUNE_PROMOTE_HIMODE_IMUL: Modern CPUs have same latency for HImode
    and SImode multiply, but 386 and 486 do HImode multiply faster.  */
