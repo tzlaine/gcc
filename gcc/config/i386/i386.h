@@ -1730,6 +1730,11 @@ typedef struct ix86_args {
 
 #define EXIT_IGNORE_STACK 1
 
+/* Define this macro as a C expression that is nonzero for registers
+   used by the epilogue or the `return' pattern.  */
+
+#define EPILOGUE_USES(REGNO) ix86_epilogue_uses (REGNO)
+
 /* Output assembler code for a block containing the constant parts
    of a trampoline, leaving space for the variable parts.  */
 

@@ -5455,10 +5455,6 @@ ix86_offload_options (void)
   return xstrdup ("-foffload-abi=ilp32");
 }
 
-/* Number registers which must be preserved for interrupt return.  */
-
-unsigned int ix86_interrupt_return_nregs;
-
 /* Update register usage after having seen the compiler flags.  */
 
 static void
@@ -5530,22 +5526,6 @@ ix86_conditional_register_usage (void)
   if (! TARGET_MPX)
     for (i = FIRST_BND_REG; i <= LAST_BND_REG; i++)
       fixed_regs[i] = call_used_regs[i] = 1, reg_names[i] = "";
-
-  /* All integer and vector registers, except for MMX and x87
-     registers which aren't supported in ix86_compute_frame_layout
-     when saving and restoring registers, are preserved in
-     interrupt handler.  No need to preserve BP and SP registers
-     since they are always preserved.  */
-  unsigned int n = 0;
-  for (i = 0; i < FIRST_PSEUDO_REGISTER; i++)
-    if (reg_names[i][0]
-	&& !STACK_REGNO_P (i)
-	&& !MMX_REGNO_P (i)
-	&& i != BP_REG
-	&& i != SP_REG
-	&& (i <= ST7_REG || i >= XMM0_REG))
-      n++;
-  ix86_interrupt_return_nregs = n;
 }
 
 
@@ -11110,6 +11090,23 @@ ix86_select_alt_pic_regnum (void)
   return INVALID_REGNUM;
 }
 
+/* Return true if REGNO is used by the epilogue.  */
+
+bool
+ix86_epilogue_uses (int regno)
+{
+  /* All preserved registers are used by the epilogue of interrupt
+     handler.  Don't explicitly mark BP and SP registers as used
+     since they are always used in epilogue.  */
+  return (cfun->machine->is_interrupt
+	  && reg_names[regno][0]
+	  && !STACK_REGNO_P (regno)
+	  && !MMX_REGNO_P (regno)
+	  && regno != BP_REG
+	  && regno != SP_REG
+	  && (regno <= ST7_REG || regno >= XMM0_REG));
+}
+
 /* Return TRUE if we need to save REGNO.  */
 
 static bool
@@ -13603,33 +13600,7 @@ ix86_expand_epilogue (int style)
 				 UNITS_PER_WORD);
 	  emit_insn (gen_rtx_SET (stack_pointer_rtx, r));
 	}
-
-      rtx pat;
-      unsigned int i, n;
-
-      pat = gen_rtx_PARALLEL (VOIDmode,
-			      rtvec_alloc (ix86_interrupt_return_nregs + 2));
-      n = 0;
-      XVECEXP (pat, 0, n++) = simple_return_rtx;
-      XVECEXP (pat, 0, n++) = gen_rtx_UNSPEC (VOIDmode,
-					      gen_rtvec (1, const0_rtx),
-					      UNSPEC_INTERRUPT_RETURN);
-
-      /* Mark all preserved registers with USE for interrupt return so
-	 that they will be restored even if they are caller-saved.  */
-      for (i = 0; i < FIRST_PSEUDO_REGISTER; i++)
-	if (reg_names[i][0]
-	    && !STACK_REGNO_P (i)
-	    && !MMX_REGNO_P (i)
-	    && i != BP_REG
-	    && i != SP_REG
-	    && (i <= ST7_REG || i >= XMM0_REG))
-	  {
-	    rtx reg = gen_rtx_REG (GET_MODE (regno_reg_rtx[i]), i);
-	    XVECEXP (pat, 0, n++) = gen_rtx_USE (VOIDmode, reg);
-	  }
-
-      emit_jump_insn (pat);
+      emit_jump_insn (gen_interrupt_return ());
     }
   else if (crtl->args.pops_args && crtl->args.size)
     {

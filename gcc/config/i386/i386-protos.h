@@ -278,7 +278,7 @@ extern rtx maybe_get_pool_constant (rtx);
 extern char internal_label_prefix[16];
 extern int internal_label_prefix_len;
 
-extern unsigned int ix86_interrupt_return_nregs;
+extern bool ix86_epilogue_uses (int);
 
 enum ix86_address_seg { SEG_DEFAULT, SEG_FS, SEG_GS };
 struct ix86_address

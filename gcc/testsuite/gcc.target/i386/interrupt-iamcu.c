@@ -18,16 +18,13 @@ void foo (void *frame)
 	 bar (c + i) + bar (d + i) +
 	 bar (e + i) + bar (f+i);
 }
-/* { dg-final { scan-assembler "push.\t%.ax" } }*/
-/* { dg-final { scan-assembler "pop.\t%.ax" } }*/
-/* { dg-final { scan-assembler "push.\t%.dx" } }*/
-/* { dg-final { scan-assembler "pop.\t%.dx" } }*/
-/* { dg-final { scan-assembler "push.\t%.cx" } }*/
-/* { dg-final { scan-assembler "pop.\t%.cx" } }*/
-/* { dg-final { scan-assembler "push.\t%.bx" } }*/
-/* { dg-final { scan-assembler "pop.\t%.bx" } }*/
-/* { dg-final { scan-assembler "push.\t%.si" } }*/
-/* { dg-final { scan-assembler "pop.\t%.si" } }*/
-/* { dg-final { scan-assembler "push.\t%.di" } }*/
-/* { dg-final { scan-assembler "pop.\t%.di" } }*/
+
+/* { dg-final { scan-assembler-not "pushl\[\\t \]*%ebx" } } */
+/* { dg-final { scan-assembler-not "pushl\[\\t \]*%e(s|d)i" } } */
+/* { dg-final { scan-assembler-times "pushl\[\\t \]*%eax" 1 } } */
+/* { dg-final { scan-assembler-times "pushl\[\\t \]*%ecx" 1 } } */
+/* { dg-final { scan-assembler-times "pushl\[\\t \]*%edx" 1 } } */
+/* { dg-final { scan-assembler-times "popl\[\\t \]*%eax" 1 } } */
+/* { dg-final { scan-assembler-times "popl\[\\t \]*%ecx" 1 } } */
+/* { dg-final { scan-assembler-times "popl\[\\t \]*%edx" 1 } } */
 /* { dg-final { scan-assembler "iret" } }*/
