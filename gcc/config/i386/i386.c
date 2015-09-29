@@ -11121,7 +11121,8 @@ ix86_save_reg (unsigned int regno, bool maybe_eh_return)
      always preserved.  */
   if (cfun->machine->is_interrupt)
     return ((df_regs_ever_live_p (regno)
-	     || (call_used_regs[regno] && cfun->machine->make_calls))
+	     || (call_used_regs[regno]
+		 && cfun->machine->call_with_caller_saved_registers))
 	    && !fixed_regs[regno]
 	    && !STACK_REGNO_P (regno)
 	    && !MMX_REGNO_P (regno)
@@ -26943,7 +26944,7 @@ ix86_expand_call (rtx retval, rtx fnaddr, rtx callarg1,
   if (use)
     CALL_INSN_FUNCTION_USAGE (call) = use;
 
-  cfun->machine->make_calls = true;
+  cfun->machine->call_with_caller_saved_registers = true;
 
   return call;
 }

@@ -2507,8 +2507,9 @@ struct GTY(()) machine_function {
      specified by the "exception" attribute.  */
   BOOL_BITFIELD is_exception : 1;
 
-  /* If true, the current function makes any function calls.  */
-  BOOL_BITFIELD make_calls : 1;
+  /* If true, the current function makes any function calls with
+     caller-saved registers.  */
+  BOOL_BITFIELD call_with_caller_saved_registers : 1;
 
   /* If true, there is register available for argument passing.  This
      is used only in ix86_function_ok_for_sibcall by 32-bit to determine
