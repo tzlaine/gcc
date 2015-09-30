@@ -11119,7 +11119,7 @@ ix86_save_reg (unsigned int regno, bool maybe_eh_return)
      is made in interrupt handler since the called function may change
      them.  Don't explicitly save BP and SP registers since they are
      always preserved.  */
-  if (cfun->machine->is_interrupt)
+  if (cfun->machine->is_interrupt && reload_completed)
     return ((df_regs_ever_live_p (regno)
 	     || (call_used_regs[regno]
 		 && cfun->machine->call_with_caller_saved_registers))
