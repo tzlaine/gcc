@@ -6349,6 +6349,8 @@ extern tree current_nonlambda_scope		(void);
 extern void maybe_add_lambda_conv_op            (tree);
 extern bool is_lambda_ignored_entity            (tree);
 
+extern tree begin_any_concept_type		(tree);
+
 /* in tree.c */
 extern int cp_tree_operand_length		(const_tree);
 void cp_free_lang_data 				(tree t);
