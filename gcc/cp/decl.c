@@ -6351,7 +6351,7 @@ initialize_local_var (tree decl, tree init)
    back end.  */
 
 void
-initialize_artificial_var (tree decl, vec<constructor_elt, va_gc> *v)
+initialize_artificial_var (tree decl, vec<constructor_elt, va_gc> *v) // TODO: Use this.
 {
   tree init;
   gcc_assert (DECL_ARTIFICIAL (decl));
