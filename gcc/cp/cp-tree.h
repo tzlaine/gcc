@@ -4803,6 +4803,9 @@ extern GTY(()) vec<tree, va_gc> *local_classes;
 #define LAMBDANAME_PREFIX "__lambda"
 #define LAMBDANAME_FORMAT LAMBDANAME_PREFIX "%d"
 
+#define ANYCONCEPTNAME_PREFIX "__any_"
+#define ANYCONCEPTNAME_FORMAT ANYCONCEPTNAME_PREFIX "%s"
+
 #define UDLIT_OP_ANSI_PREFIX "operator\"\""
 #define UDLIT_OP_ANSI_FORMAT UDLIT_OP_ANSI_PREFIX "%s"
 #define UDLIT_OP_MANGLED_PREFIX "li"
@@ -5629,6 +5632,7 @@ extern void finish_scope			(void);
 extern void push_switch				(tree);
 extern void pop_switch				(void);
 extern tree make_lambda_name			(void);
+extern tree make_any_concept_name		(tree);
 extern int decls_match				(tree, tree);
 extern tree duplicate_decls			(tree, tree, bool);
 extern tree declare_local_label			(tree);

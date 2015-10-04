@@ -2119,6 +2119,15 @@ make_lambda_name (void)
   return get_identifier (buf);
 }
 
+tree
+make_any_concept_name (tree concept_identifier)
+{
+  char buf[1024];
+
+  sprintf (buf, ANYCONCEPTNAME_FORMAT, IDENTIFIER_POINTER (concept_identifier));
+  return get_identifier (buf);
+}
+
 /* Return (from the stack of) the BINDING, if any, established at SCOPE.  */
 
 static inline cxx_binding *
