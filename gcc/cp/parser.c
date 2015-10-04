@@ -15331,6 +15331,42 @@ cp_parser_type_specifier (cp_parser* parser,
 				      /*type_definition_p=*/false);
       return type_spec;
 
+    case RID_ANY:
+    {
+      tree type_decl;
+      tree identifier;
+      tree type;
+
+      /* Consume the `enum' token.  */
+      cp_lexer_consume_token (parser->lexer);
+
+      cp_token *token = cp_lexer_peek_token (parser->lexer);
+      identifier = cp_parser_identifier (parser);
+      if (identifier == error_mark_node)
+        return error_mark_node;
+
+      /* Look up the type-name.  */
+      type_decl = cp_parser_lookup_name_simple (parser, identifier, token->location);
+
+      type_decl = strip_using_decl (type_decl);
+  
+      /* Determine whether the overload refers to a concept. */
+      if (/*tree decl = */cp_parser_maybe_concept_name (parser, type_decl))
+        type_spec = identifier;
+
+      if (declares_class_or_enum)
+          *declares_class_or_enum = 2;
+
+      // TODO: Only define the type if it does not already exist.
+      type = begin_any_concept_type (identifier); 
+      type = finish_struct (type, /*attributes=*/NULL_TREE);
+
+      // TODO: Ensure that if this is a decl, it is at namespace scope.
+      // TODO: Build out API from concept.
+
+      return type_spec;
+    }
+
     case RID_CONST:
       ds = ds_const;
       if (is_cv_qualifier)
