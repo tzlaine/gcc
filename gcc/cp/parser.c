@@ -15353,17 +15353,32 @@ cp_parser_type_specifier (cp_parser* parser,
 
       type_decl = strip_using_decl (type_decl);
 
-#if 0 // TODO: This predicate is broken; fix it.
-      if (tree concept_decl = cp_parser_maybe_concept_name (parser, type_decl))
+      bool not_a_concept = !type_decl || type_decl == error_mark_node;
+
+      if (!not_a_concept && !variable_concept_p (type_decl))
         {
-          if (!DECL_P (concept_decl)
-           || !DECL_LANG_SPECIFIC (concept_decl)
-           || !DECL_DECLARED_CONSTEXPR_P (concept_decl))
-{printf("error!\n");
-            return error_mark_node; // TODO: Diagnose that "Foo" in "any Foo" must be a concept.
-}
+          /* A constrained type specifier can only be found in an
+             overload set or as a reference to a template declaration.
+
+             FIXME: This might be masking a bug.  It's possible that
+             that the deduction below is causing template specializations
+             to be formed with the wildcard as an argument.  */
+          if (TREE_CODE (type_decl) != OVERLOAD
+              && !BASELINK_P (type_decl)
+              && TREE_CODE (type_decl) != TEMPLATE_DECL)
+            not_a_concept = true;
+
+          /* Try to build a call expression that evaluates the
+             concept. This can fail if the overload set refers
+             only to non-templates. */
+          tree placeholder = build_nt (WILDCARD_DECL);
+          tree check = build_concept_check (type_decl, placeholder, NULL_TREE);
+          if (check == error_mark_node)
+            not_a_concept = true;
         }
-#endif
+
+      if (not_a_concept)
+        return error_mark_node; // TODO: Diagnose that "Foo" in "any Foo" must be a concept.
 
       /* Look up the concept type-name.  */
       any_concept_identifier = make_any_concept_name(identifier);
