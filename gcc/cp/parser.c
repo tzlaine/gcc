@@ -15395,9 +15395,8 @@ cp_parser_type_specifier (cp_parser* parser,
             *declares_class_or_enum = 2;
 
           type = begin_any_concept_type (identifier); 
-          type = finish_struct (type, /*attributes=*/NULL_TREE);
-
           // TODO: Build out API from concept (use "decl" above).
+          type = finish_struct (type, /*attributes=*/NULL_TREE);
 
           return type;
         }
