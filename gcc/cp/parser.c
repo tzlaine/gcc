@@ -15336,35 +15336,58 @@ cp_parser_type_specifier (cp_parser* parser,
       tree type_decl;
       tree identifier;
       tree type;
+      tree any_concept_identifier;
 
       /* Consume the `enum' token.  */
       cp_lexer_consume_token (parser->lexer);
 
-      cp_token *token = cp_lexer_peek_token (parser->lexer);
+      // TODO: Accept a template-id, not just an identifier here.
+
+      cp_token *concept_name_token = cp_lexer_peek_token (parser->lexer);
       identifier = cp_parser_identifier (parser);
       if (identifier == error_mark_node)
         return error_mark_node;
 
-      /* Look up the type-name.  */
-      type_decl = cp_parser_lookup_name_simple (parser, identifier, token->location);
+      /* Look up the concept type-name.  */
+      type_decl = cp_parser_lookup_name_simple (parser, identifier, concept_name_token->location);
 
       type_decl = strip_using_decl (type_decl);
-  
-      /* Determine whether the overload refers to a concept. */
-      if (/*tree decl = */cp_parser_maybe_concept_name (parser, type_decl))
-        type_spec = identifier;
 
-      if (declares_class_or_enum)
-          *declares_class_or_enum = 2;
+#if 0 // TODO: This predicate is broken; fix it.
+      if (tree concept_decl = cp_parser_maybe_concept_name (parser, type_decl))
+        {
+          if (!DECL_P (concept_decl)
+           || !DECL_LANG_SPECIFIC (concept_decl)
+           || !DECL_DECLARED_CONSTEXPR_P (concept_decl))
+{printf("error!\n");
+            return error_mark_node; // TODO: Diagnose that "Foo" in "any Foo" must be a concept.
+}
+        }
+#endif
 
-      // TODO: Only define the type if it does not already exist.
-      type = begin_any_concept_type (identifier); 
-      type = finish_struct (type, /*attributes=*/NULL_TREE);
+      /* Look up the concept type-name.  */
+      any_concept_identifier = make_any_concept_name(identifier);
+      type_decl = cp_parser_lookup_name_simple (parser, any_concept_identifier, token->location);
 
-      // TODO: Ensure that if this is a decl, it is at namespace scope.
-      // TODO: Build out API from concept.
+      if (type_decl && type_decl != error_mark_node)
+        return type_decl;
 
-      return type_spec;
+      if (is_declaration)
+        {
+          // TODO: Ensure that if this is a decl, it is in the same namespace as the concept.
+
+          if (declares_class_or_enum)
+            *declares_class_or_enum = 2;
+
+          type = begin_any_concept_type (identifier); 
+          type = finish_struct (type, /*attributes=*/NULL_TREE);
+
+          // TODO: Build out API from concept (use "decl" above).
+
+          return type;
+        }
+      else
+        return error_mark_node; // TODO: Diagnose that "any Foo" must be in a declaration on first use.
     }
 
     case RID_CONST:
