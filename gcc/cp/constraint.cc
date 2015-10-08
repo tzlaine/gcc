@@ -312,12 +312,6 @@ deduce_concept_introduction (tree expr)
   return NULL_TREE;
 }
 
-namespace {
-
-/*---------------------------------------------------------------------------
-                       Lifting of concept definitions
----------------------------------------------------------------------------*/
-
 /* Part of constraint normalization.  Whenever we find a reference to
    a variable concept or a call to a function concept, we lift or
    inline that concept's definition into the constraint.  This ensures
@@ -325,6 +319,19 @@ namespace {
    context. */
 
 tree lift_expression (tree);
+
+/* Part of constraint normalization. The following functions rewrite
+   expressions as constraints.  */
+
+tree transform_expression (tree);
+
+tree normalize_constraint (tree);
+
+namespace {
+
+/*---------------------------------------------------------------------------
+                       Lifting of concept definitions
+---------------------------------------------------------------------------*/
 
 /* If the tree T has operands, then lift any concepts out of them.  */
 tree
@@ -460,58 +467,9 @@ lift_requires_expression (tree t)
   return finish_requires_expr (parms, result);
 }
 
-/* Inline references to specializations of concepts.  */
-tree
-lift_expression (tree t)
-{
-  if (t == NULL_TREE)
-    return NULL_TREE;
-
-  if (t == error_mark_node)
-    return error_mark_node;
-
-  /* Concepts can be referred to by call or variable. All other
-     nodes are preserved.  */
-  switch (TREE_CODE (t))
-    {
-    case CALL_EXPR:
-      return lift_call_expression (t);
-
-    case TEMPLATE_ID_EXPR:
-      return lift_template_id (t);
-
-    case REQUIRES_EXPR:
-      return lift_requires_expression (t);
-
-    case EXPR_PACK_EXPANSION:
-      /* Use copy_node rather than make_pack_expansion so that
-	 PACK_EXPANSION_PARAMETER_PACKS stays the same.  */
-      t = copy_node (t);
-      SET_PACK_EXPANSION_PATTERN
-	(t, lift_expression (PACK_EXPANSION_PATTERN (t)));
-      return t;
-
-    case TREE_LIST:
-      {
-        t = copy_node (t);
-        TREE_VALUE (t) = lift_expression (TREE_VALUE (t));
-        TREE_CHAIN (t) = lift_expression (TREE_CHAIN (t));
-        return t;
-      }
-
-    default:
-      return lift_operands (t);
-    }
-}
-
 /*---------------------------------------------------------------------------
                 Transformation of expressions into constraints
 ---------------------------------------------------------------------------*/
-
-/* Part of constraint normalization. The following functions rewrite
-   expressions as constraints.  */
-
-tree transform_expression (tree);
 
 /* Check that the logical-or or logical-and expression does
    not result in a call to a user-defined user-defined operator
@@ -799,52 +757,9 @@ xform_decl (tree t)
   return error_mark_node;
 }
 
-/* Transform a lifted expression into a constraint. This either
-   returns a constraint, or it returns error_mark_node when
-   a constraint cannot be formed.  */
-
-tree
-transform_expression (tree t)
-{
-  if (!t)
-    return NULL_TREE;
-
-  if (t == error_mark_node)
-    return error_mark_node;
-
-  switch (TREE_CODE_CLASS (TREE_CODE (t)))
-    {
-    case tcc_unary:
-    case tcc_binary:
-    case tcc_expression:
-    case tcc_vl_exp:
-      return xform_expr (t);
-
-    case tcc_statement:
-      return xform_stmt (t);
-
-    case tcc_declaration:
-      return xform_decl (t);
-
-    case tcc_exceptional:
-    case tcc_constant:
-    case tcc_reference:
-    case tcc_comparison:
-      /* These are all atomic predicate constraints. */
-      return xform_atomic (t);
-
-    default:
-      /* Unhandled node kind. */
-      gcc_unreachable ();
-    }
-  return error_mark_node;
-}
-
 /*---------------------------------------------------------------------------
                         Constraint normalization
 ---------------------------------------------------------------------------*/
-
-tree normalize_constraint (tree);
 
 /* The normal form of the disjunction T0 /\ T1 is the conjunction
    of the normal form of T0 and the normal form of T1.  */
@@ -896,6 +811,8 @@ normalize_parameterized_constraint (tree t)
   return build_nt (PARM_CONSTR, parms, operand);
 }
 
+} /* namespace */
+
 /* Normalize the constraint T by reducing it so that it is
    comprised of only conjunctions and disjunctions of atomic
    constraints.  */
@@ -938,7 +855,90 @@ normalize_constraint (tree t)
   return error_mark_node;
 }
 
-} /* namespace */
+/* Inline references to specializations of concepts.  */
+tree
+lift_expression (tree t)
+{
+  if (t == NULL_TREE)
+    return NULL_TREE;
+
+  if (t == error_mark_node)
+    return error_mark_node;
+
+  /* Concepts can be referred to by call or variable. All other
+     nodes are preserved.  */
+  switch (TREE_CODE (t))
+    {
+    case CALL_EXPR:
+      return lift_call_expression (t);
+
+    case TEMPLATE_ID_EXPR:
+      return lift_template_id (t);
+
+    case REQUIRES_EXPR:
+      return lift_requires_expression (t);
+
+    case EXPR_PACK_EXPANSION:
+      /* Use copy_node rather than make_pack_expansion so that
+	 PACK_EXPANSION_PARAMETER_PACKS stays the same.  */
+      t = copy_node (t);
+      SET_PACK_EXPANSION_PATTERN
+	(t, lift_expression (PACK_EXPANSION_PATTERN (t)));
+      return t;
+
+    case TREE_LIST:
+      {
+        t = copy_node (t);
+        TREE_VALUE (t) = lift_expression (TREE_VALUE (t));
+        TREE_CHAIN (t) = lift_expression (TREE_CHAIN (t));
+        return t;
+      }
+
+    default:
+      return lift_operands (t);
+    }
+}
+
+/* Transform a lifted expression into a constraint. This either
+   returns a constraint, or it returns error_mark_node when
+   a constraint cannot be formed.  */
+
+tree
+transform_expression (tree t)
+{
+  if (!t)
+    return NULL_TREE;
+
+  if (t == error_mark_node)
+    return error_mark_node;
+
+  switch (TREE_CODE_CLASS (TREE_CODE (t)))
+    {
+    case tcc_unary:
+    case tcc_binary:
+    case tcc_expression:
+    case tcc_vl_exp:
+      return xform_expr (t);
+
+    case tcc_statement:
+      return xform_stmt (t);
+
+    case tcc_declaration:
+      return xform_decl (t);
+
+    case tcc_exceptional:
+    case tcc_constant:
+    case tcc_reference:
+    case tcc_comparison:
+      /* These are all atomic predicate constraints. */
+      return xform_atomic (t);
+
+    default:
+      /* Unhandled node kind. */
+      gcc_unreachable ();
+    }
+  return error_mark_node;
+}
 
 
 // -------------------------------------------------------------------------- //
