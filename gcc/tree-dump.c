@@ -328,7 +328,8 @@ dequeue_and_dump (dump_info_p di)
   if (IS_EXPR_CODE_CLASS (code_class))
     {
       /* If we're dumping children, dump them now.  */
-      queue_and_dump_type (di, t);
+      if (TYPE_P (t))
+	queue_and_dump_type (di, t);
 
       switch (code_class)
 	{

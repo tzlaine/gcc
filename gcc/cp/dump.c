@@ -491,6 +491,75 @@ cp_dump_tree (void* dump_info, tree t)
       dump_child ("expr", EXPR_STMT_EXPR (t));
       break;
 
+#if 0 // TODO
+    case CONSTRAINT_INFO:
+      break;
+
+    case WILDCARD_DECL:
+      break;
+#endif
+
+    case SIMPLE_REQ:
+      dump_child ("expr", TREE_OPERAND (t, 0));
+      break;
+
+    case TYPE_REQ:
+      dump_child ("type", TREE_OPERAND (t, 0));
+      break;
+
+    case COMPOUND_REQ:
+      dump_child ("expr", TREE_OPERAND (t, 0));
+      dump_child ("type", TREE_OPERAND (t, 1));
+      if (COMPOUND_REQ_NOEXCEPT_P (t))
+	dump_string_field (di, "note", "noexcept");
+      break;
+
+    case NESTED_REQ:
+      dump_child ("expr", TREE_OPERAND (t, 0));
+      break;
+
+    case PRED_CONSTR:
+      dump_child ("expr", PRED_CONSTR_EXPR (t));
+      break;
+
+    case EXPR_CONSTR:
+      dump_child ("expr", EXPR_CONSTR_EXPR (t));
+      break;
+
+    case TYPE_CONSTR:
+      dump_child ("type", TYPE_CONSTR_TYPE (t));
+      break;
+
+    case ICONV_CONSTR:
+      dump_child ("expr", ICONV_CONSTR_EXPR (t));
+      dump_child ("type", ICONV_CONSTR_TYPE (t));
+      break;
+
+    case DEDUCT_CONSTR:
+      dump_child ("expr", DEDUCT_CONSTR_EXPR (t));
+      dump_child ("type", DEDUCT_CONSTR_PATTERN (t));
+      dump_child ("placeholders", DEDUCT_CONSTR_PLACEHOLDER (t));
+      break;
+
+    case EXCEPT_CONSTR:
+      dump_child ("expr", EXCEPT_CONSTR_EXPR (t));
+      break;
+
+    case PARM_CONSTR:
+      dump_child ("parms", PARM_CONSTR_PARMS (t));
+      dump_child ("expr", PARM_CONSTR_OPERAND (t));
+      break;
+
+    case CONJ_CONSTR:
+      dump_child ("expr0", TREE_OPERAND (t, 0));
+      dump_child ("expr1", TREE_OPERAND (t, 1));
+      break;
+
+    case DISJ_CONSTR:
+      dump_child ("expr0", TREE_OPERAND (t, 0));
+      dump_child ("expr1", TREE_OPERAND (t, 1));
+      break;
+
     default:
       break;
     }
