@@ -15202,6 +15202,12 @@ cp_parser_explicit_specialization (cp_parser* parser)
   --parser->num_template_parameter_lists;
 }
 
+extern void dump_node (const_tree t, int flags, FILE *stream);
+extern tree lift_expression (tree t);
+extern tree transform_expression (tree t);
+extern tree normalize_constraint (tree);
+extern bool virtualize_constraint (tree t, tree dynamic_concept);
+
 /* Parse a type-specifier.
 
    type-specifier:
@@ -15379,6 +15385,106 @@ cp_parser_type_specifier (cp_parser* parser,
 
       if (not_a_concept)
         return error_mark_node; // TODO: Diagnose that "Foo" in "any Foo" must be a concept.
+
+      if (TREE_CODE (type_decl) == OVERLOAD)
+        {
+          tree ovl = type_decl;
+          //          tree cands = NULL_TREE;
+          for (tree p = ovl; p != NULL_TREE; p = OVL_NEXT (p))
+            {
+              // Get the next template overload.
+              tree tmpl = OVL_CURRENT (p);
+              if (TREE_CODE (tmpl) != TEMPLATE_DECL)
+                continue;
+
+              // Don't try to deduce checks for non-concepts. We often
+              // end up trying to resolve constraints in functional casts
+              // as part of a postfix-expression. We can save time and
+              // headaches by not instantiating those declarations.
+              //
+              // NOTE: This masks a potential error, caused by instantiating
+              // non-deduced contexts using placeholder arguments.
+              tree fn = DECL_TEMPLATE_RESULT (tmpl);
+              if (DECL_ARGUMENTS (fn))
+                continue;
+              if (!DECL_DECLARED_CONCEPT_P (fn))
+                continue;
+
+              printf ("Found one!\n");
+
+              {
+                FILE* f1 = fopen ("tmpl.tree", "w");
+                dump_node (tmpl, int(0), f1);
+                fclose (f1);
+              }
+
+              {
+                FILE* f2 = fopen ("fn.tree", "w");
+                dump_node (fn, int(0), f2);
+                fclose (f2);
+              }
+
+              tree fn_bind = DECL_SAVED_TREE (fn);
+              {
+                FILE* f3 = fopen ("fn_bind.tree", "w");
+                dump_node (fn_bind, int(0), f3);
+                fclose (f3);
+              }
+
+              tree fn_body = BIND_EXPR_BODY(fn_bind);
+              {
+                FILE* f4 = fopen ("fn_body.tree", "w");
+                dump_node (fn_body, int(0), f4);
+                fclose (f4);
+              }
+
+              tree requires_expr = TREE_OPERAND (fn_body, 0);
+              {
+                FILE* f4 = fopen ("requires.tree", "w");
+                dump_node (requires_expr, int(0), f4);
+                fclose (f4);
+              }
+
+              {
+                FILE* f1 = fopen ("lifted_requires.tree", "w");
+                dump_node (lift_expression(requires_expr), int(0), f1);
+                fclose (f1);
+              }
+
+              tree constraints = transform_expression (lift_expression (requires_expr));
+              {
+                FILE* f1 = fopen ("constraints.tree", "w");
+                dump_node (constraints, int(0), f1);
+                fclose (f1);
+              }
+
+              tree normalized_constraints =
+                normalize_constraint (transform_expression (lift_expression (requires_expr)));
+              {
+                FILE* f1 = fopen ("normalized_constraints.tree", "w");
+//                dump_node (normalized_constraints, int(0), f1);
+                virtualize_constraint (normalized_constraints, (tree)f1);
+                fclose (f1);
+              }
+
+#if 0
+              // Remember the candidate if we can deduce a substitution.
+              ++processing_template_decl;
+              tree parms = TREE_VALUE (DECL_TEMPLATE_PARMS (tmpl));
+              if (tree subst = coerce_template_parms (parms, args, tmpl))
+                if (subst != error_mark_node)
+                  cands = tree_cons (subst, fn, cands);
+              --processing_template_decl;
+#endif
+            }
+
+#if 0
+          // If we didn't find a unique candidate, then this is
+          // not a constraint check.
+          if (!cands || TREE_CHAIN (cands))
+            return NULL_TREE;
+#endif
+        }
 
       /* Look up the concept type-name.  */
       any_concept_identifier = make_any_concept_name(identifier);
