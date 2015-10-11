@@ -2623,45 +2623,76 @@ diagnose_constraints (location_t loc, tree t, tree args)
 ---------------------------------------------------------------------------*/
 
 extern void dump_node (const_tree t, int flags, FILE *stream); // TODO
+FILE* virtualize_dump_file = NULL;
 
-bool virtualize_constraint (tree t, tree dynamic_concept);
+bool virtualize_constraint (tree t, tree proto_identifier, tree dynamic_concept);
 
 namespace {
 
 bool
-virtualize_conjunction_constraint (tree t, tree dynamic_concept)
+virtualize_conjunction_constraint (tree t, tree proto_identifier, tree dynamic_concept)
 {
   return
-    virtualize_constraint (TREE_OPERAND (t, 0), dynamic_concept) &&
-    virtualize_constraint (TREE_OPERAND (t, 1), dynamic_concept);
+    virtualize_constraint (TREE_OPERAND (t, 0), proto_identifier, dynamic_concept) &&
+    virtualize_constraint (TREE_OPERAND (t, 1), proto_identifier, dynamic_concept);
 }
 
 bool
-virtualize_parameterized_constraint (tree t, tree dynamic_concept)
+virtualize_parameterized_constraint (tree t, tree proto_identifier, tree dynamic_concept)
 {
   // TODO: Build a map from parameters to their decltypes.
-  dump_node (PARM_CONSTR_PARMS (t), 0, (FILE*)dynamic_concept); // TODO
-  return virtualize_constraint (PARM_CONSTR_OPERAND (t), dynamic_concept);
+  dump_node (PARM_CONSTR_PARMS (t), 0, virtualize_dump_file); // TODO
+  return virtualize_constraint (PARM_CONSTR_OPERAND (t), proto_identifier, dynamic_concept);
 }
 
 bool
-virtualize_expression_constraint (tree t, tree dynamic_concept)
+virtualize_expression_constraint (tree t, tree, tree)
 {
   // TODO: Only accept ctors and dtors here.
-  dump_node (t, 0, (FILE*)dynamic_concept); // TODO
+  dump_node (t, 0, virtualize_dump_file); // TODO
+  return true;
+}
+
+bool dump_type (tree type, tree, tree)
+{
+  fprintf (virtualize_dump_file, "type:\n"); // TODO
+  dump_node (type, 0, virtualize_dump_file); // TODO
+
   return true;
 }
 
 bool
-virtualize_implicit_conversion_constraint (tree t, tree dynamic_concept)
+dump_expr_signature (tree expr, tree, tree)
+{
+  fprintf (virtualize_dump_file, "expr:\n"); // TODO
+  dump_node (expr, 0, virtualize_dump_file); // TODO
+
+  return true;
+}
+
+bool
+virtualize_implicit_conversion_constraint (tree t, tree proto_identifier, tree dynamic_concept)
 {
   // TODO: Virtualize a function.
-  dump_node (t, 0, (FILE*)dynamic_concept); // TODO
+  dump_node (t, 0, virtualize_dump_file); // TODO
+
+  tree type = ICONV_CONSTR_TYPE (t);
+  if (!dump_type (type, proto_identifier, dynamic_concept))
+    {
+      return false;
+    }
+
+  tree expr = ICONV_CONSTR_EXPR (t);
+  if (!dump_expr_signature (expr, proto_identifier, dynamic_concept))
+    {
+      return false;
+    }
+
   return true;
 }
 
 bool
-virtualize_argument_deduction_constraint (tree, tree)
+virtualize_argument_deduction_constraint (tree, tree, tree)
 {
   // TODO: Traverse the list of placeholders, replacing each occurance of
   // concept C with the "any C" type.  If the resulting type is not dependent,
@@ -2674,12 +2705,12 @@ virtualize_argument_deduction_constraint (tree, tree)
   // concept name.
 
 #if 0
-  fprintf ((FILE*)dynamic_concept, "expr\n");
-  dump_node (DEDUCT_CONSTR_EXPR (t), 0, (FILE*)dynamic_concept);
-  fprintf ((FILE*)dynamic_concept, "type\n");
-  dump_node (DEDUCT_CONSTR_PATTERN (t), 0, (FILE*)dynamic_concept);
-  fprintf ((FILE*)dynamic_concept, "placeholders\n");
-  dump_node (DEDUCT_CONSTR_PLACEHOLDER (t), 0, (FILE*)dynamic_concept);
+  fprintf (virtualize_dump_file, "expr\n");
+  dump_node (DEDUCT_CONSTR_EXPR (t), 0, virtualize_dump_file);
+  fprintf (virtualize_dump_file, "type\n");
+  dump_node (DEDUCT_CONSTR_PATTERN (t), 0, virtualize_dump_file);
+  fprintf (virtualize_dump_file, "placeholders\n");
+  dump_node (DEDUCT_CONSTR_PLACEHOLDER (t), 0, virtualize_dump_file);
 #endif
 
   // TODO: Diagnose.
@@ -2687,20 +2718,20 @@ virtualize_argument_deduction_constraint (tree, tree)
 }
 
 bool
-virtualize_exception_constraint (tree t, tree dynamic_concept)
+virtualize_exception_constraint (tree t, tree, tree)
 {
   // TODO: Associate this with an existing function, or maybe just record it
   // for later.
-  dump_node (t, 0, (FILE*)dynamic_concept); // TODO
+  dump_node (t, 0, virtualize_dump_file); // TODO
   return true;
 }
 
 } /* namespace */
 
 bool
-virtualize_constraint (tree t, tree dynamic_concept)
+virtualize_constraint (tree t, tree proto_identifier, tree dynamic_concept)
 {
-  fprintf ((FILE*)dynamic_concept, "virtualize_constraint\n");
+  fprintf (virtualize_dump_file, "virtualize_constraint\n");
 
   if (!t)
     return NULL_TREE;
@@ -2711,43 +2742,43 @@ virtualize_constraint (tree t, tree dynamic_concept)
   switch (TREE_CODE (t))
     {
     case CONJ_CONSTR:
-      fprintf ((FILE*)dynamic_concept, "virtualize_conjunction_constraint\n");
-      return virtualize_conjunction_constraint (t, dynamic_concept);
+      fprintf (virtualize_dump_file, "virtualize_conjunction_constraint\n");
+      return virtualize_conjunction_constraint (t, proto_identifier, dynamic_concept);
 
     case DISJ_CONSTR:
-      fprintf ((FILE*)dynamic_concept, "virtualize_disjunction_constraint\n");
+      fprintf (virtualize_dump_file, "virtualize_disjunction_constraint\n");
       // TODO: Diagnose.
       return false;
 
     case PRED_CONSTR:
       /* Predicate constraints are not virtualized. */
-      fprintf ((FILE*)dynamic_concept, "virtualize_predicate_constraint\n");
+      fprintf (virtualize_dump_file, "virtualize_predicate_constraint\n");
       return true;
 
     case PARM_CONSTR:
-      fprintf ((FILE*)dynamic_concept, "virtualize_parameterized_constraint\n");
-      return virtualize_parameterized_constraint (t, dynamic_concept);
+      fprintf (virtualize_dump_file, "virtualize_parameterized_constraint\n");
+      return virtualize_parameterized_constraint (t, proto_identifier, dynamic_concept);
 
     case EXPR_CONSTR:
-      fprintf ((FILE*)dynamic_concept, "virtualize_expression_constraint\n");
-      return virtualize_expression_constraint (t, dynamic_concept);
+      fprintf (virtualize_dump_file, "virtualize_expression_constraint\n");
+      return virtualize_expression_constraint (t, proto_identifier, dynamic_concept);
 
     case TYPE_CONSTR:
       /* Type constraints are not virtualized. */
-      fprintf ((FILE*)dynamic_concept, "virtualize_type_constraint\n");
+      fprintf (virtualize_dump_file, "virtualize_type_constraint\n");
       return true;
 
     case ICONV_CONSTR:
-      fprintf ((FILE*)dynamic_concept, "virtualize_implicit_conversion_constraint\n");
-      return virtualize_implicit_conversion_constraint(t, dynamic_concept);
+      fprintf (virtualize_dump_file, "virtualize_implicit_conversion_constraint\n");
+      return virtualize_implicit_conversion_constraint(t, proto_identifier, dynamic_concept);
 
     case DEDUCT_CONSTR:
-      fprintf ((FILE*)dynamic_concept, "virtualize_argument_deduction_constraint\n");
-      return virtualize_argument_deduction_constraint (t, dynamic_concept);
+      fprintf (virtualize_dump_file, "virtualize_argument_deduction_constraint\n");
+      return virtualize_argument_deduction_constraint (t, proto_identifier, dynamic_concept);
 
     case EXCEPT_CONSTR:
-      fprintf ((FILE*)dynamic_concept, "virtualize_exception_constraint\n");
-      return virtualize_exception_constraint (t, dynamic_concept);
+      fprintf (virtualize_dump_file, "virtualize_exception_constraint\n");
+      return virtualize_exception_constraint (t, proto_identifier, dynamic_concept);
 
     default:
       gcc_unreachable();
