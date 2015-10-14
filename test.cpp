@@ -9,16 +9,24 @@ concept bool True () {
     return true;
 }
 
+int foo(int) { return 0; }
+
 #if 1
 template <typename T>
 concept bool Addable () {
-    return requires (T const & t, T t2) {
+    return requires (T const & t, T t2, T* t3) {
         typename id<T>;
         requires true;
-        {t} -> auto;
-        {t} -> True;
-        {t + t} -> T;
-        {t + t} noexcept;
+//        {t} -> auto;
+//        {t} -> True;
+//        {foo(*t3)} -> T;
+//        {-t2} -> T;
+//        {&t2} -> T const*;
+        {*t} -> T;
+//        {*-t2} -> bool;
+//        {t2} -> T;
+//        {t + t} -> T;
+//        {t + t} noexcept;
     };
 }
 #else
@@ -30,6 +38,7 @@ concept bool Addable =
 #endif
 
 
+#if 0
 template <typename T>
 concept bool UsedConcept () {
     return requires (T const & t) {
@@ -46,7 +55,6 @@ concept bool ConceptUser () {
     };
 }
 
-#if 1
 any ConceptUser;
 #endif
 
@@ -61,14 +69,18 @@ concept bool NestedParams () {
     };
 }
 
-struct my_type {};
+struct my_type
+{
+    bool operator*() const { return true; }
+    my_type operator-() const { return *this; }
+};
 
 auto constrained_fn (Addable value)
 {
     return value + value;
 }
 
-#if 0
+#if 1
 any Addable;
 #endif
 
@@ -82,8 +94,10 @@ any Foo;
 
 int main ()
 {
+#if 0
     int i = 0;
     constrained_fn(i);
+#endif
 
 #if 0
     my_type mt = {};
