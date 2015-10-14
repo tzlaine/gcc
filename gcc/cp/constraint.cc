@@ -2653,12 +2653,12 @@ virtualize_expression_constraint (tree t, tree, tree)
   return true;
 }
 
-bool dump_type (tree type, tree, tree)
+tree
+virtualize_implicit_conversion_return_type (tree type, tree dynamic_concept)
 {
-  fprintf (virtualize_dump_file, "type:\n"); // TODO
-  dump_node (type, 0, virtualize_dump_file); // TODO
-
-  return true;
+  tree vec = make_tree_vec (1);
+  TREE_VEC_ELT (vec, 0) = dynamic_concept;
+  return tsubst_expr (type, vec, tf_none, NULL_TREE, false);
 }
 
 bool
@@ -2677,7 +2677,8 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_identifier, tree d
   dump_node (t, 0, virtualize_dump_file); // TODO
 
   tree type = ICONV_CONSTR_TYPE (t);
-  if (!dump_type (type, proto_identifier, dynamic_concept))
+  type = virtualize_implicit_conversion_return_type (type, dynamic_concept);
+  if (!type || type == error_mark_node)
     {
       return false;
     }
