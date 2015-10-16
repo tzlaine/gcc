@@ -34,6 +34,21 @@ concept bool Addable () {
         {*t3} -> T;
         {*i} -> T;
 #endif
+#if 0 // Binary ops
+        {t2 << t2} -> bool;
+        {t2 >> t2} -> bool;
+        {t2 |  t2} -> bool;
+        {t2 ^  t2} -> bool;
+        {t2 &  t2} -> bool;
+        {t2 && t2} -> bool;
+        {t2 || t2} -> bool;
+        {t2 + t2} -> bool;
+        {t2 - t2} -> bool;
+        {t2 * t2} -> bool;
+        {t2 / t2} -> bool;
+        {t2 && t2} -> bool;
+        {t2 || t2} -> bool;
+#endif
 #if 0 // Comparison binary ops
         {t2 <  t2} -> bool;
         {t2 <= t2} -> bool;

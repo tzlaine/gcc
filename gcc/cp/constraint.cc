@@ -2765,7 +2765,20 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
           return true;
         }
     }
-  /* Binary operators + - * / % ^ & | ~ ! = += -= *= /= %= ^= &= |= << >> >>= <<= && || ++ -- , ->* -> () [] */
+  /* Binary operator &&. */
+  else if (TREE_CODE (expr) == TRUTH_ANDIF_EXPR)
+    {
+        fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator&&(lhs, rhs)\n"); // TODO
+        return true;
+    }
+  /* Binary operator ||. */
+  else if (TREE_CODE (expr) == TRUTH_ORIF_EXPR)
+    {
+        fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator||(lhs, rhs)\n"); // TODO
+        return true;
+    }
+  /* Binary operators (+ - * / % ^ & | ~ ! = += -= *= /= %= ^= &= |= << >> >>=
+     <<= ++ -- , ->* -> () []). */
   else if (BINARY_CLASS_P (expr))
     {
       fprintf (virtualize_dump_file, "binary op:\n"); // TODO
@@ -2780,6 +2793,43 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
         {
           fprintf (virtualize_dump_file, "Too many operators!"); // TODO
           return false;
+        }
+
+      switch (TREE_CODE (expr))
+        {
+        case PLUS_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator+(lhs, rhs)\n"); // TODO
+          return true;
+        case MINUS_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator-(lhs, rhs)\n"); // TODO
+          return true;
+        case MULT_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator*(lhs, rhs)\n"); // TODO
+          return true;
+        case TRUNC_DIV_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator/(lhs, rhs)\n"); // TODO
+          return true;
+        case LSHIFT_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator<<(lhs, rhs)\n"); // TODO
+          return true;
+        case RSHIFT_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator>>(lhs, rhs)\n"); // TODO
+          return true;
+        case BIT_IOR_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator|(lhs, rhs)\n"); // TODO
+          return true;
+        case BIT_XOR_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator^(lhs, rhs)\n"); // TODO
+          return true;
+        case BIT_AND_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator&(lhs, rhs)\n"); // TODO
+          return true;
+        default:
+#if 1
+            break;
+#else
+            gcc_unreachable();
+#endif
         }
     }
   /* Binary operators < > == != <= >= */
