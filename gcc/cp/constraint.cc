@@ -2670,25 +2670,67 @@ bool non_ref_expr_p (tree t)
   return EXPR_P (t) && !INDIRECT_REF_P (t);
 }
 
+bool uses_prototype_param_p (tree t, tree /*proto_identifier*/)
+{
+  // TODO
+  return uses_template_parms (t);
+}
+
 bool
-dump_expr_signature (tree expr, tree, tree)
+virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type */,
+                                                tree /* proto_identifier */, bool expr_uses_prototype_param,
+                                                tree /* dynamic_concept */)
 {
   fprintf (virtualize_dump_file, "expr:\n"); // TODO
   dump_node (expr, 0, virtualize_dump_file); // TODO
 
-  if (INDIRECT_REF_P (expr))
+  if (!expr_uses_prototype_param)
+    {
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+      fprintf (virtualize_dump_file, "The return type must be implicitly convertible from this expression:\n"); // TODO
+      dump_node (expr, 0, virtualize_dump_file); // TODO
+      fprintf (virtualize_dump_file, "This expression's type:\n"); // TODO
+      dump_node (TREE_TYPE (expr), 0, virtualize_dump_file); // TODO
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+      return false;
+    }
+
+  /* Address-of operator. */
+  if (TREE_CODE (expr) == ADDR_EXPR)
+    {
+      fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator&()\n"); // TODO
+      return true;
+    }
+  /* Dereference operator. */
+  else if (INDIRECT_REF_P (expr))
     {
       fprintf (virtualize_dump_file, "pointer-deref op:\n"); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
       tree operand = TREE_OPERAND (expr, 0);
       dump_node (operand, 0, virtualize_dump_file); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
+
       if (non_ref_expr_p (operand))
         {
-          fprintf (virtualize_dump_file, "Too many operators!"); // TODO
+          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
           return false;
         }
+
+      bool pointer_deref =
+        TREE_CODE (operand) == PARM_DECL && TREE_CODE (TREE_TYPE (operand)) == POINTER_TYPE;
+
+      if (pointer_deref)
+        {
+          fprintf (virtualize_dump_file, "Virtualize T::operator <return-type>()\n"); // TODO
+          return true;
+        }
+      else
+        {
+          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator*()\n"); // TODO
+          return true;
+        }
     }
+  /* Unary operators +-!~ */
   else if (UNARY_CLASS_P (expr))
     {
       fprintf (virtualize_dump_file, "unary op:\n"); // TODO
@@ -2700,6 +2742,27 @@ dump_expr_signature (tree expr, tree, tree)
         {
           fprintf (virtualize_dump_file, "Too many operators!"); // TODO
           return false;
+        }
+
+      if (TREE_CODE (expr) == UNARY_PLUS_EXPR)
+        {
+          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator+()\n"); // TODO
+          return true;
+        }
+      else if (TREE_CODE (expr) == NEGATE_EXPR)
+        {
+          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator-()\n"); // TODO
+          return true;
+        }
+      else if (TREE_CODE (expr) == BIT_NOT_EXPR)
+        {
+          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator~()\n"); // TODO
+          return true;
+        }
+      else if (TREE_CODE (expr) == TRUTH_NOT_EXPR)
+        {
+          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator!()\n"); // TODO
+          return true;
         }
     }
   else if (BINARY_CLASS_P (expr))
@@ -2795,14 +2858,24 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_identifier, tree d
   dump_node (t, 0, virtualize_dump_file); // TODO
 
   tree type = ICONV_CONSTR_TYPE (t);
+  tree expr = ICONV_CONSTR_EXPR (t);
+  bool expr_uses_prototype_param = uses_prototype_param_p (expr, proto_identifier);
+  if (!uses_prototype_param_p (type, proto_identifier) && !expr_uses_prototype_param)
+    {
+      /* Nothing to virtualize, but that's not a problem. */
+      return true;
+    }
+
   type = virtualize_implicit_conversion_return_type (type, dynamic_concept);
   if (!type || type == error_mark_node)
     {
       return false;
     }
 
-  tree expr = ICONV_CONSTR_EXPR (t);
-  if (!dump_expr_signature (expr, proto_identifier, dynamic_concept))
+  if (!virtualize_implicit_conversion_constraint_impl
+      (expr, type, proto_identifier,
+       expr_uses_prototype_param,
+       dynamic_concept))
     {
       return false;
     }
