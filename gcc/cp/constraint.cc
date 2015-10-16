@@ -2695,13 +2695,13 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
       return false;
     }
 
-  /* Address-of operator. */
+  /* Address-of operator (&). */
   if (TREE_CODE (expr) == ADDR_EXPR)
     {
       fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator&()\n"); // TODO
       return true;
     }
-  /* Dereference operator. */
+  /* Dereference operator (*). */
   else if (INDIRECT_REF_P (expr))
     {
       fprintf (virtualize_dump_file, "pointer-deref op:\n"); // TODO
@@ -2730,7 +2730,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
           return true;
         }
     }
-  /* Unary operators +-!~ */
+  /* Other unary operators (+ - ! ~). */
   else if (UNARY_CLASS_P (expr))
     {
       fprintf (virtualize_dump_file, "unary op:\n"); // TODO
@@ -2765,6 +2765,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
           return true;
         }
     }
+  /* Binary operators + - * / % ^ & | ~ ! = += -= *= /= %= ^= &= |= << >> >>= <<= && || ++ -- , ->* -> () [] */
   else if (BINARY_CLASS_P (expr))
     {
       fprintf (virtualize_dump_file, "binary op:\n"); // TODO
@@ -2781,6 +2782,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
           return false;
         }
     }
+  /* Binary operators < > == != <= >= */
   else if (COMPARISON_CLASS_P (expr))
     {
       fprintf (virtualize_dump_file, "binary op:\n"); // TODO
@@ -2795,6 +2797,30 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
         {
           fprintf (virtualize_dump_file, "Too many operators!"); // TODO
           return false;
+        }
+
+      switch (TREE_CODE (expr))
+        {
+        case LT_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator<(lhs, rhs)\n"); // TODO
+          return true;
+        case LE_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator<=(lhs, rhs)\n"); // TODO
+          return true;
+        case GT_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator>(lhs, rhs)\n"); // TODO
+          return true;
+        case GE_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator>=(lhs, rhs)\n"); // TODO
+          return true;
+        case EQ_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator==(lhs, rhs)\n"); // TODO
+          return true;
+        case NE_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator!=(lhs, rhs)\n"); // TODO
+          return true;
+        default:
+            gcc_unreachable();
         }
     }
   else if (TREE_CODE (expr) == CALL_EXPR)
