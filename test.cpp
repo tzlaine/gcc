@@ -14,7 +14,7 @@ int foo(int) { return 0; }
 #if 1
 template <typename T>
 concept bool Addable () {
-    return requires (T const & t, T t2, T* t3, int* i) {
+    return requires (T const & t, T t2, T * t3, int * i) {
         typename id<T>;
         requires true;
 //        {t} -> auto;
@@ -29,10 +29,14 @@ concept bool Addable () {
         {~t2} -> T;
         {-t2} -> T;
         {+t2} -> T;
-        {&t2} -> T const*;
+        {&t2} -> T const *;
         {*t2} -> T;
         {*t3} -> T;
         {*i} -> T;
+        {++t2} -> T &;
+        {t2++} -> T &;
+        {--t2} -> T &;
+        {t2--} -> T &;
 #endif
 #if 0 // Binary ops
         {t2 << t2} -> bool;
@@ -42,12 +46,15 @@ concept bool Addable () {
         {t2 &  t2} -> bool;
         {t2 && t2} -> bool;
         {t2 || t2} -> bool;
-        {t2 + t2} -> bool;
-        {t2 - t2} -> bool;
-        {t2 * t2} -> bool;
-        {t2 / t2} -> bool;
+        {t2 +  t2} -> bool;
+        {t2 -  t2} -> bool;
+        {t2 *  t2} -> bool;
+        {t2 /  t2} -> bool;
+        {t2 %  t2} -> bool;
         {t2 && t2} -> bool;
         {t2 || t2} -> bool;
+        {t2 ,  t2} -> T &;
+        {t2[0]} -> T &;
 #endif
 #if 0 // Comparison binary ops
         {t2 <  t2} -> bool;

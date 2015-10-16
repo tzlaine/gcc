@@ -2692,10 +2692,17 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
       fprintf (virtualize_dump_file, "This expression's type:\n"); // TODO
       dump_node (TREE_TYPE (expr), 0, virtualize_dump_file); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
+      return true;
+    }
+
+  /* Explicitly disallow references to non-function members in expr. */
+  if (TREE_CODE (expr) == COMPONENT_REF)
+    {
+      fprintf (virtualize_dump_file, "Virtualization fails! Requirements on the existence of non-function members not supported.\n"); // TODO
       return false;
     }
 
-  /* Address-of operator (&). */
+  /* Dereference operator (*). */
   if (TREE_CODE (expr) == ADDR_EXPR)
     {
       fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator&()\n"); // TODO
@@ -2729,6 +2736,30 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
           fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator*()\n"); // TODO
           return true;
         }
+    }
+  /* Pre-increment (++).*/
+  else if (TREE_CODE (expr) == PREINCREMENT_EXPR)
+    {
+        fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator++()\n"); // TODO
+        return true;
+    }
+  /* Post-increment (++).*/
+  else if (TREE_CODE (expr) == POSTINCREMENT_EXPR)
+    {
+        fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator++(int)\n"); // TODO
+        return true;
+    }
+  /* Pre-increment (--).*/
+  else if (TREE_CODE (expr) == PREDECREMENT_EXPR)
+    {
+        fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator--()\n"); // TODO
+        return true;
+    }
+  /* Post-increment (--).*/
+  else if (TREE_CODE (expr) == POSTDECREMENT_EXPR)
+    {
+        fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator--(int)\n"); // TODO
+        return true;
     }
   /* Other unary operators (+ - ! ~). */
   else if (UNARY_CLASS_P (expr))
@@ -2765,20 +2796,39 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
           return true;
         }
     }
-  /* Binary operator &&. */
+  /* Pointer-to-member operator (->*). */
+  else if (TREE_CODE (expr) == MEMBER_REF)
+    {
+        // TODO: Diagnose.
+        fprintf (virtualize_dump_file, "Virtualization fails! Pointer-to-member not supported.\n"); // TODO
+        return false;
+    }
+  /* Boolean-and operator (&&). */
   else if (TREE_CODE (expr) == TRUTH_ANDIF_EXPR)
     {
         fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator&&(lhs, rhs)\n"); // TODO
         return true;
     }
-  /* Binary operator ||. */
+  /* Boolean-or operator (||). */
   else if (TREE_CODE (expr) == TRUTH_ORIF_EXPR)
     {
         fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator||(lhs, rhs)\n"); // TODO
         return true;
     }
-  /* Binary operators (+ - * / % ^ & | ~ ! = += -= *= /= %= ^= &= |= << >> >>=
-     <<= ++ -- , ->* -> () []). */
+  /* Comma operator (,). */
+  else if (TREE_CODE (expr) == COMPOUND_EXPR)
+    {
+        fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator,(lhs, rhs)\n"); // TODO
+        return true;
+    }
+  /* Index operator ([]). */
+  else if (TREE_CODE (expr) == ARRAY_REF)
+    {
+        fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator[](lhs, rhs)\n"); // TODO
+        return true;
+    }
+  // TODO: Handle MODOP_EXPRs (= += -= *= /= %= ^= &= |= >>= <<=).
+  /* Non-mutating binary operators (+ - * / % ^ & | ~ ! << >>). */
   else if (BINARY_CLASS_P (expr))
     {
       fprintf (virtualize_dump_file, "binary op:\n"); // TODO
@@ -2797,6 +2847,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
 
       switch (TREE_CODE (expr))
         {
+        /* Arithmetic operators (+ - * / %). */
         case PLUS_EXPR:
           fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator+(lhs, rhs)\n"); // TODO
           return true;
@@ -2809,6 +2860,11 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
         case TRUNC_DIV_EXPR:
           fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator/(lhs, rhs)\n"); // TODO
           return true;
+        case TRUNC_MOD_EXPR:
+          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator%%(lhs, rhs)\n"); // TODO
+          return true;
+
+        /* Bitwise operators (^ & | ~ ! << >>). */
         case LSHIFT_EXPR:
           fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator<<(lhs, rhs)\n"); // TODO
           return true;
@@ -2824,12 +2880,10 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
         case BIT_AND_EXPR:
           fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator&(lhs, rhs)\n"); // TODO
           return true;
+
         default:
-#if 1
-            break;
-#else
-            gcc_unreachable();
-#endif
+            // TODO: Diagnose.
+            return false;
         }
     }
   /* Binary operators < > == != <= >= */
@@ -2870,7 +2924,8 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
           fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator!=(lhs, rhs)\n"); // TODO
           return true;
         default:
-            gcc_unreachable();
+            // TODO: Diagnose.
+            return false;
         }
     }
   else if (TREE_CODE (expr) == CALL_EXPR)
@@ -2917,11 +2972,22 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
        (arg) = next_const_call_expr_arg (&(iter)))
 
 #endif
+
+      // TODO: Handle CALL_EXPRs that involve arrows on non-pointer
+      // expressions; these imply that an operator->() must be virtualized.
+
+      // TODO: Handle CALL_EXPRs that result from calling operator()().
     }
   else
     {
       fprintf (virtualize_dump_file, "unhandled expr:\n"); // TODO
       dump_node (expr, 0, virtualize_dump_file); // TODO
+
+      // TODO: Consider adding other kinds of expression, like static_cast<>()
+      // (or others).
+
+      /* Any other kind of expression causes virtualization to fail. */
+      return false;
     }
 
   return true;
