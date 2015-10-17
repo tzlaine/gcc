@@ -38,7 +38,20 @@ concept bool Addable () {
         {--t2} -> T &;
         {t2--} -> T &;
 #endif
-#if 0 // Binary ops
+#if 0 // Mutating binary ops
+        {t2 =   t} -> T &;
+        {t2 +=  t} -> T &;
+        {t2 -=  t} -> T &;
+        {t2 *=  t} -> T &;
+        {t2 /=  t} -> T &;
+        {t2 %=  t} -> T &;
+        {t2 <<= t} -> T &;
+        {t2 >>= t} -> T &;
+        {t2 |=  t} -> T &;
+        {t2 ^=  t} -> T &;
+        {t2 &=  t} -> T &;
+#endif
+#if 0 // Non-mutating binary ops
         {t2 << t2} -> bool;
         {t2 >> t2} -> bool;
         {t2 |  t2} -> bool;
