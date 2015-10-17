@@ -2669,6 +2669,10 @@ bool non_ref_expr_p (tree t)
   return EXPR_P (t) && !INDIRECT_REF_P (t);
 }
 
+// Dump this.  Instead, tsubst() all the params on the dynamic concept
+// template-id into the concept.  This should only leave the prototype
+// parameter, and therefore uses_template_parms() suffices.
+#if 0
 bool uses_prototype_parm_p (tree t, tree proto_parm);
 
 tree uses_parm_callback (tree *tp, int *, void *parm)
@@ -2689,6 +2693,24 @@ tree uses_parm_callback (tree *tp, int *, void *parm)
 bool uses_prototype_parm_p (tree t, tree proto_parm)
 {
   return walk_tree (&t, uses_parm_callback, proto_parm, NULL) != NULL_TREE;
+}
+#else
+bool uses_prototype_parm_p (tree t, tree)
+{
+  return uses_template_parms(t);
+}
+#endif
+
+bool is_prototype_parm_ref_p (tree t, tree proto_parm)
+{
+  if (INDIRECT_REF_P (t))
+    t = TREE_OPERAND (t, 0);
+  if (TREE_CODE (t) == PARM_DECL)
+    t = TREE_TYPE (t);
+  t = non_reference(t);
+  if (TREE_CODE (t) != TEMPLATE_TYPE_PARM)
+    return false;
+  return same_type_ignoring_top_level_qualifiers_p (t, TREE_TYPE (proto_parm));
 }
 
 bool
@@ -2861,11 +2883,20 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
     {
       tree lhs = TREE_OPERAND (expr, 0);
       // TODO      tree rhs = TREE_OPERAND (expr, 1);
+
       if (!uses_prototype_parm_p (lhs, proto_parm))
         {
           fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize operator[] as a non-member.\n"); // TODO
           return false;
         }
+
+
+      if (!is_prototype_parm_ref_p (lhs, proto_parm))
+        {
+          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          return false;
+        }
+
       fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator[](rhs)\n"); // TODO
       return true;
     }
@@ -2879,6 +2910,12 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree /* return_type *
       if (!uses_prototype_parm_p (lhs, proto_parm))
         {
           fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize MODO_EXPR as a non-member.\n"); // TODO
+          return false;
+        }
+
+      if (!is_prototype_parm_ref_p (lhs, proto_parm))
+        {
+          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
           return false;
         }
 

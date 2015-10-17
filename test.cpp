@@ -11,10 +11,16 @@ concept bool True () {
 
 int foo(int) { return 0; }
 
+template <typename T>
+struct wrapper
+{
+    T t;
+};
+
 #if 1
 template <typename T, typename U>
 concept bool Addable () {
-    return requires (T t, U u) {
+    return requires (T t, T & tref, U u, wrapper<T> wt) {
 #if 0 // Unary ops
         {!t} -> T;
         {~t} -> T;
@@ -67,8 +73,10 @@ concept bool Addable () {
         {t != t} -> bool;
 #endif
 #if 1
+        {wt[u]} -> T &;
+        {tref[u]} -> T &;
         {t[u]} -> T &;
-        {u[t]} -> T &;
+//        {u[t]} -> T &;
 #endif
     };
 }
