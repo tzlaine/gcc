@@ -12,70 +12,63 @@ concept bool True () {
 int foo(int) { return 0; }
 
 #if 1
-template <typename T>
+template <typename T, typename U>
 concept bool Addable () {
-    return requires (T const & t, T t2, T * t3, int * i) {
-        typename id<T>;
-        requires true;
-//        {t} -> auto;
-//        {t} -> True;
-//        {foo(*t3)} -> T;
-//        {*-t2} -> bool;
-//        {t2} -> T;
-//        {t + t} -> T;
-//        {t + t} noexcept;
+    return requires (T t, U u) {
 #if 0 // Unary ops
-        {!t2} -> T;
-        {~t2} -> T;
-        {-t2} -> T;
-        {+t2} -> T;
-        {&t2} -> T const *;
-        {*t2} -> T;
+        {!t} -> T;
+        {~t} -> T;
+        {-t} -> T;
+        {+t} -> T;
+        {&t} -> T const *;
+        {*t} -> T;
         {*t3} -> T;
         {*i} -> T;
-        {++t2} -> T &;
-        {t2++} -> T &;
-        {--t2} -> T &;
-        {t2--} -> T &;
+        {++t} -> T &;
+        {t++} -> T &;
+        {--t} -> T &;
+        {t--} -> T &;
 #endif
 #if 0 // Mutating binary ops
-        {t2 =   t} -> T &;
-        {t2 +=  t} -> T &;
-        {t2 -=  t} -> T &;
-        {t2 *=  t} -> T &;
-        {t2 /=  t} -> T &;
-        {t2 %=  t} -> T &;
-        {t2 <<= t} -> T &;
-        {t2 >>= t} -> T &;
-        {t2 |=  t} -> T &;
-        {t2 ^=  t} -> T &;
-        {t2 &=  t} -> T &;
+        {t =   t} -> T &;
+        {t +=  t} -> T &;
+        {t -=  t} -> T &;
+        {t *=  t} -> T &;
+        {t /=  t} -> T &;
+        {t %=  t} -> T &;
+        {t <<= t} -> T &;
+        {t >>= t} -> T &;
+        {t |=  t} -> T &;
+        {t ^=  t} -> T &;
+        {t &=  t} -> T &;
 #endif
 #if 0 // Non-mutating binary ops
-        {t2 << t2} -> bool;
-        {t2 >> t2} -> bool;
-        {t2 |  t2} -> bool;
-        {t2 ^  t2} -> bool;
-        {t2 &  t2} -> bool;
-        {t2 && t2} -> bool;
-        {t2 || t2} -> bool;
-        {t2 +  t2} -> bool;
-        {t2 -  t2} -> bool;
-        {t2 *  t2} -> bool;
-        {t2 /  t2} -> bool;
-        {t2 %  t2} -> bool;
-        {t2 && t2} -> bool;
-        {t2 || t2} -> bool;
-        {t2 ,  t2} -> T &;
-        {t2[0]} -> T &;
+        {t << t} -> bool;
+        {t >> t} -> bool;
+        {t |  t} -> bool;
+        {t ^  t} -> bool;
+        {t &  t} -> bool;
+        {t && t} -> bool;
+        {t || t} -> bool;
+        {t +  t} -> bool;
+        {t -  t} -> bool;
+        {t *  t} -> bool;
+        {t /  t} -> bool;
+        {t %  t} -> bool;
+        {t && t} -> bool;
+        {t || t} -> bool;
+        {t ,  t} -> T &;
+        {t[0]} -> T &;
+        {t <  t} -> bool;
+        {t <= t} -> bool;
+        {t >  t} -> bool;
+        {t >= t} -> bool;
+        {t == t} -> bool;
+        {t != t} -> bool;
 #endif
-#if 0 // Comparison binary ops
-        {t2 <  t2} -> bool;
-        {t2 <= t2} -> bool;
-        {t2 >  t2} -> bool;
-        {t2 >= t2} -> bool;
-        {t2 == t2} -> bool;
-        {t2 != t2} -> bool;
+#if 1
+        {t[u]} -> T &;
+        {u[t]} -> T &;
 #endif
     };
 }
@@ -125,10 +118,12 @@ struct my_type
     my_type operator-() const { return *this; }
 };
 
+#if 0
 auto constrained_fn (Addable value)
 {
     return value + value;
 }
+#endif
 
 #if 1
 any Addable;

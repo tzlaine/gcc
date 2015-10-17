@@ -15206,7 +15206,7 @@ extern void dump_node (const_tree t, int flags, FILE *stream);
 extern tree lift_expression (tree t);
 extern tree transform_expression (tree t);
 extern tree normalize_constraint (tree);
-extern bool virtualize_constraint (tree t, tree proto_identifier, tree dynamic_concept);
+extern bool virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept);
 
 extern FILE* virtualize_dump_file; // TODO
 
@@ -15389,7 +15389,7 @@ cp_parser_type_specifier (cp_parser* parser,
         return error_mark_node; // TODO: Diagnose that "Foo" in "any Foo" must be a concept.
 
       tree requires_expr = NULL_TREE;
-      tree proto_identifier = NULL_TREE;
+      tree proto_parm = NULL_TREE;
 
       if (TREE_CODE (type_decl) == OVERLOAD)
         {
@@ -15420,18 +15420,10 @@ cp_parser_type_specifier (cp_parser* parser,
               for (tree p = tmpl_parms; p != NULL_TREE; p = TREE_CHAIN (p))
                 {
                   gcc_assert (TREE_CODE (p) == TREE_VEC);
-                  for (int i = 0; i < TREE_VEC_LENGTH (p); ++i)
-                    {
-                      tree parm = TREE_VALUE (TREE_VEC_ELT (p, i));
-                      if (TREE_CODE (parm) == TYPE_DECL)
-                        {
-                          proto_identifier = DECL_NAME (parm);
-                          break;
-                        }
-                    }
+                  proto_parm = TREE_VALUE (TREE_VEC_ELT (p, 0));
                 }
 
-              if (!proto_identifier)
+              if (!proto_parm)
                 continue;
 
               tree fn_bind = DECL_SAVED_TREE (fn);
@@ -15510,7 +15502,7 @@ cp_parser_type_specifier (cp_parser* parser,
           tree normalized_constraints = normalize_constraint (transformed);
 
           virtualize_dump_file = fopen ("virtualize.out", "w"); // TODO
-          virtualize_constraint (normalized_constraints, proto_identifier, type);
+          virtualize_constraint (normalized_constraints, proto_parm, type);
           fclose (virtualize_dump_file); // TODO
 
           type = finish_struct (type, /*attributes=*/NULL_TREE);
