@@ -73,10 +73,11 @@ concept bool Addable () {
         {t != t} -> bool;
 #endif
 #if 1
-        {wt[u]} -> T &;
-        {tref[u]} -> T &;
-        {t[u]} -> T &;
+//        {wt[u]} -> T &;
+//        {tref[u]} -> T &;
+//        {t[u]} -> T &;
 //        {u[t]} -> T &;
+        {tref = 1} -> T &;
 #endif
     };
 }
