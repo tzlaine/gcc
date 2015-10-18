@@ -26,18 +26,18 @@ auto get_fn ()
 #if 1
 template <typename T, typename U>
 concept bool Addable () {
-    return requires (T t, T & tref, U u, wrapper<T> wt, T * tptr, int * intptr) {
+    return requires (T t, T const & tref, U u, wrapper<T> wt, T * tptr, int * intptr) {
 #if 0 // Unary ops
         {!t} -> T;
         {~t} -> T;
-        {-t} -> T;
-        {+t} -> T;
+        {-tref} -> T;
+        {+tref} -> T;
         {&t} -> T const *;
         {*t} -> T;
         {*tptr} -> T; // weird; should this tautology result in an implcit conversion op?
         {*intptr} -> T;
         {++t} -> T &;
-        {t++} -> T &;
+        {tref++} -> T &;
         {--t} -> T &;
         {t--} -> T &;
 #endif
@@ -99,7 +99,7 @@ concept bool Addable () {
         {t != t} -> bool;
         {0 != t} -> bool;
 #endif
-#if 0 // Calls to regular member functions, free functions, and call operators.
+#if 1 // Calls to regular member functions, free functions, and call operators.
 //        {u(tref)} -> T &; // not virtualizable
 //        {get_fn<T>()()} -> T &; // not virtualizable
 
@@ -109,7 +109,7 @@ concept bool Addable () {
         {tref()} -> T &;
         {tref.foo()} -> T &;
 #endif
-#if 1
+#if 0
 //        {wt[u]} -> T &;
 //        {tref[u]} -> T &;
 //        {t[u]} -> T &;
