@@ -17,6 +17,12 @@ struct wrapper
     T t;
 };
 
+template <typename T>
+auto get_fn ()
+{
+    return [](T & t) { return t; };
+}
+
 #if 1
 template <typename T, typename U>
 concept bool Addable () {
@@ -48,7 +54,7 @@ concept bool Addable () {
         {t ^=  t} -> T &;
         {t &=  t} -> T &;
 #endif
-#if 1 // Non-mutating binary ops
+#if 0 // Non-mutating binary ops
         {t << t} -> T;
         {0 << t} -> T;
         {t >> t} -> T;
@@ -93,12 +99,26 @@ concept bool Addable () {
         {t != t} -> bool;
         {0 != t} -> bool;
 #endif
-#if 0
+#if 0 // Calls to regular member functions, free functions, and call operators.
+//        {u(tref)} -> T &; // not virtualizable
+//        {get_fn<T>()()} -> T &; // not virtualizable
+
+        {foo(tref)} -> T &;
+        {t()} -> T &;
+        {t.foo()} -> T &;
+        {tref()} -> T &;
+        {tref.foo()} -> T &;
+#endif
+#if 1
 //        {wt[u]} -> T &;
 //        {tref[u]} -> T &;
 //        {t[u]} -> T &;
 //        {u[t]} -> T &;
 //        {tref = 1} -> T &;
+
+        //{T()} -> T; // Should not work, and doesn't, but it crashes!
+
+        {T()};
 #endif
     };
 }

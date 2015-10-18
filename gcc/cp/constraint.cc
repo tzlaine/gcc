@@ -44,6 +44,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "decl.h"
 #include "toplev.h"
 #include "type-utils.h"
+
+#include "c-family/c-pretty-print.h"
 #include "cxx-pretty-print.h"
 
 /*---------------------------------------------------------------------------
@@ -3047,7 +3049,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 
       if (non_ref_expr_p (rhs))
         {
-          fprintf (virtualize_dump_file, "Too many operators!"); // TODO
+          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
           return false;
         }
 
@@ -3121,7 +3123,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 
       if (non_ref_expr_p (lhs) || non_ref_expr_p (rhs))
         {
-          fprintf (virtualize_dump_file, "Too many operators!"); // TODO
+          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
           return false;
         }
 
@@ -3213,7 +3215,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 
       if (non_ref_expr_p (rhs))
         {
-          fprintf (virtualize_dump_file, "Too many operators!"); // TODO
+          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
           return false;
         }
 
@@ -3262,54 +3264,84 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
     }
   else if (TREE_CODE (expr) == CALL_EXPR)
     {
-      fprintf (virtualize_dump_file, "call expr!\n"); // TODO
       int const n_args = call_expr_nargs(expr);
       for (int i = 0; i < n_args; ++i)
         {
           tree arg = CALL_EXPR_ARG (expr, i);
           if (non_ref_expr_p (arg))
             {
-              fprintf (virtualize_dump_file, "Too many operators!"); // TODO
+              fprintf (virtualize_dump_file, "call expr!\n"); // TODO
+              fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
               dump_node (arg, 0, virtualize_dump_file); // TODO
               return false;
             }
         }
-      // TODO
-#if 0
 
-/* CALL_EXPR accessors.  */
-#define CALL_EXPR_FN(NODE) TREE_OPERAND (CALL_EXPR_CHECK (NODE), 1)
-#define CALL_EXPR_STATIC_CHAIN(NODE) TREE_OPERAND (CALL_EXPR_CHECK (NODE), 2)
-#define CALL_EXPR_ARG(NODE, I) TREE_OPERAND (CALL_EXPR_CHECK (NODE), (I) + 3)
-#define call_expr_nargs(NODE) (VL_EXP_OPERAND_LENGTH (NODE) - 3)
-#define CALL_EXPR_IFN(NODE) (CALL_EXPR_CHECK (NODE)->base.u.ifn)
+      tree fn = CALL_EXPR_FN (expr);
 
-/* CALL_EXPR_ARGP returns a pointer to the argument vector for NODE.
-   We can't use &CALL_EXPR_ARG (NODE, 0) because that will complain if
-   the argument count is zero when checking is enabled.  Instead, do
-   the pointer arithmetic to advance past the 3 fixed operands in a
-   CALL_EXPR.  That produces a valid pointer to just past the end of the
-   operand array, even if it's not valid to dereference it.  */
-#define CALL_EXPR_ARGP(NODE) \
-  (&(TREE_OPERAND (CALL_EXPR_CHECK (NODE), 0)) + 3)
+      cxx_pretty_printer pp;
+      pp.type_id (return_type);
+      pp_string (&pp, " ");
 
-/* Iterate through each argument ARG of CALL_EXPR CALL, using variable ITER
-   (of type call_expr_arg_iterator) to hold the iteration state.  */
-#define FOR_EACH_CALL_EXPR_ARG(arg, iter, call)			\
-  for ((arg) = first_call_expr_arg ((call), &(iter)); (arg);	\
-       (arg) = next_call_expr_arg (&(iter)))
+      switch (TREE_CODE (fn))
+        {
+        /* Member function call. */
+        case COMPONENT_REF:
+          pp.type_id (dynamic_concept);
+          pp_string (&pp, "::");
+          pp_string (&pp, IDENTIFIER_POINTER (TREE_OPERAND (fn, 1)));
+          break;
 
-#define FOR_EACH_CONST_CALL_EXPR_ARG(arg, iter, call)			\
-  for ((arg) = first_const_call_expr_arg ((call), &(iter)); (arg);	\
-       (arg) = next_const_call_expr_arg (&(iter)))
+        /* Call to operator()(). */
+        case INDIRECT_REF:
+        case PARM_DECL:
+          if (!is_prototype_parm_ref_p (fn, proto_parm))
+            {
+              fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+              fprintf (virtualize_dump_file, "call expr!\n"); // TODO
+              return false;
+            }
+          pp.type_id (dynamic_concept);
+          pp_string (&pp, "::operator()");
+          break;
 
-#endif
+        /* Free function call. */
+        case FUNCTION_DECL:
+          pp_string (&pp, "::");
+          pp_identifier (&pp, IDENTIFIER_POINTER (DECL_NAME (fn)));
+          break;
+
+        default:
+          fprintf (virtualize_dump_file, "call expr!\n"); // TODO
+          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
+          dump_node (expr, 0, virtualize_dump_file); // TODO
+          return false;
+        }
+
+      pp_string (&pp, " (");
+      for (int i = 0; i < n_args; ++i)
+        {
+          tree arg = CALL_EXPR_ARG (expr, i);
+          if (i)
+            pp_string (&pp, ", ");
+          tree parm_decl = TREE_CODE (arg) == INDIRECT_REF ? TREE_OPERAND (arg, 0) : arg;
+          pp.type_id (TREE_TYPE (parm_decl));
+        }
+      pp_string (&pp, " );\n");
+      fprintf (virtualize_dump_file, pp_formatted_text (&pp));
 
       // TODO: Handle CALL_EXPRs that involve arrows on non-pointer
       // expressions; these imply that an operator->() must be virtualized.
       // operator->() must be a member.
 
-      // TODO: Handle CALL_EXPRs that result from calling operator()().
+#if 0
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+      fprintf (virtualize_dump_file, "expr:\n"); // TODO
+      dump_node (expr, 0, virtualize_dump_file); // TODO
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+#endif
+
+      return true;
     }
   else
     {
@@ -3323,7 +3355,8 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       return false;
     }
 
-  return true;
+  // TODO: Diagnose.
+  return false;
 }
 
 bool
