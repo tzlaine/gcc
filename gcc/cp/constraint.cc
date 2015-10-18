@@ -2777,11 +2777,6 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
                                                 tree proto_parm, bool expr_uses_prototype_parm,
                                                 tree dynamic_concept)
 {
-#if 0
-  fprintf (virtualize_dump_file, "expr:\n"); // TODO
-  dump_node (expr, 0, virtualize_dump_file); // TODO
-#endif
-
   if (!expr_uses_prototype_parm)
     {
 #if 0
@@ -2824,13 +2819,6 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   else if (INDIRECT_REF_P (expr))
     {
       tree operand = TREE_OPERAND (expr, 0);
-
-#if 0
-      fprintf (virtualize_dump_file, "pointer-deref op:\n"); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      dump_node (operand, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
 
       if (non_ref_expr_p (operand))
         {
@@ -2930,13 +2918,6 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   else if (UNARY_CLASS_P (expr))
     {
       tree operand = TREE_OPERAND (expr, 0);
-
-#if 0
-      fprintf (virtualize_dump_file, "unary op:\n"); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      dump_node (operand, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
 
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
@@ -3058,19 +3039,6 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           return false;
         }
 
-#if 0
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      fprintf (virtualize_dump_file, "lhs:\n"); // TODO
-      dump_node (lhs, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      fprintf (virtualize_dump_file, "op:\n"); // TODO
-      dump_node (op, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      fprintf (virtualize_dump_file, "rhs:\n"); // TODO
-      dump_node (rhs, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
-
       switch (TREE_CODE (op))
       {
       case NOP_EXPR:
@@ -3116,15 +3084,6 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
     {
       tree lhs = TREE_OPERAND (expr, 0);
       tree rhs = TREE_OPERAND (expr, 1);
-
-#if 0
-      fprintf (virtualize_dump_file, "binary op:\n"); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      dump_node (lhs, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      dump_node (rhs, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
 
       if (non_ref_expr_p (lhs) || non_ref_expr_p (rhs))
         {
@@ -3208,15 +3167,6 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
     {
       tree lhs = TREE_OPERAND (expr, 0);
       tree rhs = TREE_OPERAND (expr, 1);
-
-#if 0
-      fprintf (virtualize_dump_file, "binary op:\n"); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      dump_node (lhs, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      dump_node (rhs, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
 
       if (non_ref_expr_p (rhs))
         {
@@ -3347,13 +3297,6 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       // TODO: Handle CALL_EXPRs that involve arrows on non-pointer
       // expressions; these imply that an operator->() must be virtualized.
       // operator->() must be a member.
-
-#if 0
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      fprintf (virtualize_dump_file, "expr:\n"); // TODO
-      dump_node (expr, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
 
       return true;
     }
