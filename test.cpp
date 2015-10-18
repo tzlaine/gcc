@@ -50,27 +50,48 @@ concept bool Addable () {
 #endif
 #if 1 // Non-mutating binary ops
         {t << t} -> T;
+        {0 << t} -> T;
         {t >> t} -> T;
+        {0 >> t} -> T;
         {t |  t} -> T;
+        {0 |  t} -> T;
         {t ^  t} -> T;
+        {0 ^  t} -> T;
         {t &  t} -> T;
+        {0 &  t} -> T;
         {t && t} -> T;
+        {0 && t} -> T;
         {t || t} -> T;
+        {0 || t} -> T;
         {t +  t} -> T;
+        {0 +  t} -> T;
         {t -  t} -> T;
+        {0 -  t} -> T;
         {t *  t} -> T;
+        {0 *  t} -> T;
         {t /  t} -> T;
+        {0 /  t} -> T;
         {t %  t} -> T;
+        {0 %  t} -> T;
         {t && t} -> bool;
+        {0 && t} -> bool;
         {t || t} -> bool;
+        {0 || t} -> bool;
         {t ,  t} -> T &;
+        {0 ,  t} -> T &;
         {t[0]} -> T &;
         {t <  t} -> bool;
+        {0 <  t} -> bool;
         {t <= t} -> bool;
+        {0 <= t} -> bool;
         {t >  t} -> bool;
+        {0 >  t} -> bool;
         {t >= t} -> bool;
+        {0 >= t} -> bool;
         {t == t} -> bool;
+        {0 == t} -> bool;
         {t != t} -> bool;
+        {0 != t} -> bool;
 #endif
 #if 0
 //        {wt[u]} -> T &;

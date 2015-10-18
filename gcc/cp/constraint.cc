@@ -2810,6 +2810,14 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   /* Dereference operator (&). */
   if (TREE_CODE (expr) == ADDR_EXPR)
     {
+      tree operand = TREE_OPERAND (expr, 0);
+
+      if (!is_prototype_parm_ref_p (operand, proto_parm))
+        {
+          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          return false;
+        }
+
       dump_member_operator_overload (return_type, dynamic_concept, "&");
       return true;
     }
@@ -2841,6 +2849,14 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
         }
       else
         {
+          tree operand = TREE_OPERAND (expr, 0);
+
+          if (!is_prototype_parm_ref_p (operand, proto_parm))
+            {
+              fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+              return false;
+            }
+
           dump_member_operator_overload (return_type, dynamic_concept, "*");
           return true;
         }
@@ -2863,29 +2879,53 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
     }
 #endif
-  /* Pre-increment (++).*/
+  /* Pre-increment (++). */
   else if (TREE_CODE (expr) == PREINCREMENT_EXPR)
     {
-        dump_member_operator_overload (return_type, dynamic_concept, "++");
-        return true;
+      tree operand = TREE_OPERAND (expr, 0);
+      if (!is_prototype_parm_ref_p (operand, proto_parm))
+        {
+          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          return false;
+        }
+      dump_member_operator_overload (return_type, dynamic_concept, "++");
+      return true;
     }
-  /* Post-increment (++).*/
+  /* Post-increment (++). */
   else if (TREE_CODE (expr) == POSTINCREMENT_EXPR)
     {
-        dump_member_operator_overload (return_type, dynamic_concept, "++", integer_type_node);
-        return true;
+      tree operand = TREE_OPERAND (expr, 0);
+      if (!is_prototype_parm_ref_p (operand, proto_parm))
+        {
+          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          return false;
+        }
+      dump_member_operator_overload (return_type, dynamic_concept, "++", integer_type_node);
+      return true;
     }
-  /* Pre-increment (--).*/
+  /* Pre-increment (--). */
   else if (TREE_CODE (expr) == PREDECREMENT_EXPR)
     {
-        dump_member_operator_overload (return_type, dynamic_concept, "--");
-        return true;
+      tree operand = TREE_OPERAND (expr, 0);
+      if (!is_prototype_parm_ref_p (operand, proto_parm))
+        {
+          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          return false;
+        }
+      dump_member_operator_overload (return_type, dynamic_concept, "--");
+      return true;
     }
-  /* Post-increment (--).*/
+  /* Post-increment (--). */
   else if (TREE_CODE (expr) == POSTDECREMENT_EXPR)
     {
-        dump_member_operator_overload (return_type, dynamic_concept, "--", integer_type_node);
-        return true;
+      tree operand = TREE_OPERAND (expr, 0);
+      if (!is_prototype_parm_ref_p (operand, proto_parm))
+        {
+          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          return false;
+        }
+      dump_member_operator_overload (return_type, dynamic_concept, "--", integer_type_node);
+      return true;
     }
   /* Other unary operators (+ - ~). */
   else if (UNARY_CLASS_P (expr))
@@ -2899,9 +2939,9 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
 #endif
 
-      if (non_ref_expr_p (operand))
+      if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Too many operators!"); // TODO
+          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
           return false;
         }
 
@@ -2947,6 +2987,12 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   /* Boolean-not operator (!). */
   else if (TREE_CODE (expr) == TRUTH_NOT_EXPR)
     {
+      tree operand = TREE_OPERAND (expr, 0);
+      if (!is_prototype_parm_ref_p (operand, proto_parm))
+        {
+          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          return false;
+        }
       dump_member_operator_overload (return_type, dynamic_concept, "!");
       return true;
     }
@@ -2969,7 +3015,6 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize operator[] as a non-member.\n"); // TODO
           return false;
         }
-
 
       if (!is_prototype_parm_ref_p (lhs, proto_parm))
         {
@@ -2999,7 +3044,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           return false;
         }
 
-      if (non_ref_expr_p (lhs) || non_ref_expr_p (rhs))
+      if (non_ref_expr_p (rhs))
         {
           fprintf (virtualize_dump_file, "Too many operators!"); // TODO
           return false;
