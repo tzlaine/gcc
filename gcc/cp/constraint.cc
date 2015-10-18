@@ -2641,15 +2641,15 @@ virtualize_conjunction_constraint (tree t, tree proto_parm, tree dynamic_concept
 bool
 virtualize_parameterized_constraint (tree t, tree proto_parm, tree dynamic_concept)
 {
-  dump_node (PARM_CONSTR_PARMS (t), 0, virtualize_dump_file); // TODO
+  //  dump_node (PARM_CONSTR_PARMS (t), 0, virtualize_dump_file); // TODO
   return virtualize_constraint (PARM_CONSTR_OPERAND (t), proto_parm, dynamic_concept);
 }
 
 bool
-virtualize_expression_constraint (tree t, tree, tree)
+virtualize_expression_constraint (tree, tree, tree)
 {
   // TODO: Only accept ctors and dtors here.
-  dump_node (t, 0, virtualize_dump_file); // TODO
+  //  dump_node (t, 0, virtualize_dump_file); // TODO
   return true;
 }
 
@@ -2715,7 +2715,7 @@ bool is_prototype_parm_ref_p (tree t, tree proto_parm)
 }
 
 void
-dump_operator_overload (tree return_type, tree struct_, const char* op, tree rhs_type)
+dump_operator_overload_impl (tree return_type, tree struct_, const char* op, tree parm0, tree parm1)
 {
   cxx_pretty_printer pp;
   pp.type_id(return_type);
@@ -2725,9 +2725,51 @@ dump_operator_overload (tree return_type, tree struct_, const char* op, tree rhs
   pp_string (&pp, "::operator");
   pp_string (&pp, op);
   pp_string (&pp, " (");
-  if (rhs_type)
-    pp.type_id(rhs_type);
+  if (parm0)
+    pp.type_id(parm0);
+  if (parm1)
+    {
+      pp_string (&pp, ", ");
+      pp.type_id(parm1);
+    }
   pp_string (&pp, ");\n");
+  fprintf(virtualize_dump_file, pp_formatted_text (&pp));
+}
+
+void
+dump_operator_overload (tree return_type, const char* op, tree lhs, tree rhs)
+{
+  dump_operator_overload_impl (return_type, NULL_TREE, op, lhs, rhs);
+}
+
+#if 0
+void
+dump_operator_overload (tree return_type, const char* op, tree operand)
+{
+  dump_operator_overload_impl (return_type, NULL_TREE, op, operand, NULL_TREE);
+}
+#endif
+
+void
+dump_member_operator_overload (tree return_type, tree struct_, const char* op, tree rhs)
+{
+  dump_operator_overload_impl (return_type, struct_, op, rhs, NULL_TREE);
+}
+
+void
+dump_member_operator_overload (tree return_type, tree struct_, const char* op)
+{
+  dump_operator_overload_impl (return_type, struct_, op, NULL_TREE, NULL_TREE);
+}
+
+void
+dump_implicit_conversion_operator (tree return_type, tree struct_)
+{
+  cxx_pretty_printer pp;
+  pp.type_id(struct_);
+  pp_string (&pp, "::operator");
+  pp.type_id(return_type);
+  pp_string (&pp, " ();\n");
   fprintf(virtualize_dump_file, pp_formatted_text (&pp));
 }
 
@@ -2736,19 +2778,25 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
                                                 tree proto_parm, bool expr_uses_prototype_parm,
                                                 tree dynamic_concept)
 {
+#if 0
   fprintf (virtualize_dump_file, "expr:\n"); // TODO
   dump_node (expr, 0, virtualize_dump_file); // TODO
+#endif
 
   if (!expr_uses_prototype_parm)
     {
+#if 0
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
       fprintf (virtualize_dump_file, "The return type must be implicitly convertible from this expression:\n"); // TODO
       dump_node (expr, 0, virtualize_dump_file); // TODO
+#endif
 #if 0
       fprintf (virtualize_dump_file, "This expression's type:\n"); // TODO
       dump_node (TREE_TYPE (expr), 0, virtualize_dump_file); // TODO
 #endif
+#if 0
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
+#endif
       return true;
     }
 
@@ -2759,20 +2807,23 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       return false;
     }
 
-  /* Dereference operator (*). */
+  /* Dereference operator (&). */
   if (TREE_CODE (expr) == ADDR_EXPR)
     {
-      fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator&()\n"); // TODO
+      dump_member_operator_overload (return_type, dynamic_concept, "&");
       return true;
     }
   /* Dereference operator (*). */
   else if (INDIRECT_REF_P (expr))
     {
+      tree operand = TREE_OPERAND (expr, 0);
+
+#if 0
       fprintf (virtualize_dump_file, "pointer-deref op:\n"); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      tree operand = TREE_OPERAND (expr, 0);
       dump_node (operand, 0, virtualize_dump_file); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
+#endif
 
       if (non_ref_expr_p (operand))
         {
@@ -2785,12 +2836,12 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 
       if (pointer_deref)
         {
-          fprintf (virtualize_dump_file, "Virtualize T::operator <return-type>()\n"); // TODO
+          dump_implicit_conversion_operator (return_type, dynamic_concept);
           return true;
         }
       else
         {
-          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator*()\n"); // TODO
+          dump_member_operator_overload (return_type, dynamic_concept, "*");
           return true;
         }
     }
@@ -2815,35 +2866,39 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   /* Pre-increment (++).*/
   else if (TREE_CODE (expr) == PREINCREMENT_EXPR)
     {
-        fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator++()\n"); // TODO
+        dump_member_operator_overload (return_type, dynamic_concept, "++");
         return true;
     }
   /* Post-increment (++).*/
   else if (TREE_CODE (expr) == POSTINCREMENT_EXPR)
     {
-        fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator++(int)\n"); // TODO
+        dump_member_operator_overload (return_type, dynamic_concept, "++", integer_type_node);
         return true;
     }
   /* Pre-increment (--).*/
   else if (TREE_CODE (expr) == PREDECREMENT_EXPR)
     {
-        fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator--()\n"); // TODO
+        dump_member_operator_overload (return_type, dynamic_concept, "--");
         return true;
     }
   /* Post-increment (--).*/
   else if (TREE_CODE (expr) == POSTDECREMENT_EXPR)
     {
-        fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator--(int)\n"); // TODO
+        dump_member_operator_overload (return_type, dynamic_concept, "--", integer_type_node);
         return true;
     }
-  /* Other unary operators (+ - ! ~). */
+  /* Other unary operators (+ - ~). */
   else if (UNARY_CLASS_P (expr))
     {
+      tree operand = TREE_OPERAND (expr, 0);
+
+#if 0
       fprintf (virtualize_dump_file, "unary op:\n"); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      tree operand = TREE_OPERAND (expr, 0);
       dump_node (operand, 0, virtualize_dump_file); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
+#endif
+
       if (non_ref_expr_p (operand))
         {
           fprintf (virtualize_dump_file, "Too many operators!"); // TODO
@@ -2852,22 +2907,17 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 
       if (TREE_CODE (expr) == UNARY_PLUS_EXPR)
         {
-          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator+()\n"); // TODO
+          dump_member_operator_overload (return_type, dynamic_concept, "+");
           return true;
         }
       else if (TREE_CODE (expr) == NEGATE_EXPR)
         {
-          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator-()\n"); // TODO
+          dump_member_operator_overload (return_type, dynamic_concept, "-");
           return true;
         }
       else if (TREE_CODE (expr) == BIT_NOT_EXPR)
         {
-          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator~()\n"); // TODO
-          return true;
-        }
-      else if (TREE_CODE (expr) == TRUTH_NOT_EXPR)
-        {
-          fprintf (virtualize_dump_file, "Virtualize <return-type> T::operator!()\n"); // TODO
+          dump_member_operator_overload (return_type, dynamic_concept, "~");
           return true;
         }
     }
@@ -2881,19 +2931,31 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   /* Boolean-and operator (&&). */
   else if (TREE_CODE (expr) == TRUTH_ANDIF_EXPR)
     {
-      fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator&&(lhs, rhs)\n"); // TODO
+      tree lhs = TREE_OPERAND (expr, 0);
+      tree rhs = TREE_OPERAND (expr, 1);
+      dump_operator_overload (return_type, "&&", TREE_TYPE (lhs), TREE_TYPE (rhs));
       return true;
     }
   /* Boolean-or operator (||). */
   else if (TREE_CODE (expr) == TRUTH_ORIF_EXPR)
     {
-      fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator||(lhs, rhs)\n"); // TODO
+      tree lhs = TREE_OPERAND (expr, 0);
+      tree rhs = TREE_OPERAND (expr, 1);
+      dump_operator_overload (return_type, "||", TREE_TYPE (lhs), TREE_TYPE (rhs));
+      return true;
+    }
+  /* Boolean-not operator (!). */
+  else if (TREE_CODE (expr) == TRUTH_NOT_EXPR)
+    {
+      dump_member_operator_overload (return_type, dynamic_concept, "!");
       return true;
     }
   /* Comma operator (,). */
   else if (TREE_CODE (expr) == COMPOUND_EXPR)
     {
-      fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator,(lhs, rhs)\n"); // TODO
+      tree lhs = TREE_OPERAND (expr, 0);
+      tree rhs = TREE_OPERAND (expr, 1);
+      dump_operator_overload (return_type, ",", TREE_TYPE (lhs), TREE_TYPE (rhs));
       return true;
     }
   /* Index operator ([]). */
@@ -2915,7 +2977,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           return false;
         }
 
-      dump_operator_overload (return_type, dynamic_concept, "=", TREE_TYPE (rhs));
+      dump_member_operator_overload (return_type, dynamic_concept, "[]", TREE_TYPE (rhs));
       return true;
     }
   /* Modifying binary operators (= += -= *= /= %= ^= &= |= >>= <<=). */
@@ -2959,37 +3021,37 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       switch (TREE_CODE (op))
       {
       case NOP_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "=", TREE_TYPE (rhs));
         return true;
       case PLUS_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "+=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "+=", TREE_TYPE (rhs));
         return true;
       case MINUS_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "-=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "-=", TREE_TYPE (rhs));
         return true;
       case MULT_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "*=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "*=", TREE_TYPE (rhs));
         return true;
       case TRUNC_DIV_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "/=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "/=", TREE_TYPE (rhs));
         return true;
       case TRUNC_MOD_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "%%=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "%%=", TREE_TYPE (rhs));
         return true;
       case LSHIFT_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "<<=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "<<=", TREE_TYPE (rhs));
         return true;
       case RSHIFT_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, ">>=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, ">>=", TREE_TYPE (rhs));
         return true;
       case BIT_IOR_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "|=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "|=", TREE_TYPE (rhs));
         return true;
       case BIT_XOR_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "^=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "^=", TREE_TYPE (rhs));
         return true;
       case BIT_AND_EXPR:
-        dump_operator_overload (return_type, dynamic_concept, "&=", TREE_TYPE (rhs));
+        dump_member_operator_overload (return_type, dynamic_concept, "&=", TREE_TYPE (rhs));
         return true;
       default:
         // TODO: Diagnose.
@@ -2999,14 +3061,18 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   /* Non-mutating binary operators (+ - * / % ^ & | ~ ! << >>). */
   else if (BINARY_CLASS_P (expr))
     {
+      tree lhs = TREE_OPERAND (expr, 0);
+      tree rhs = TREE_OPERAND (expr, 1);
+
+#if 0
       fprintf (virtualize_dump_file, "binary op:\n"); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      tree lhs = TREE_OPERAND (expr, 0);
       dump_node (lhs, 0, virtualize_dump_file); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      tree rhs = TREE_OPERAND (expr, 1);
       dump_node (rhs, 0, virtualize_dump_file); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
+#endif
+
       if (non_ref_expr_p (lhs) || non_ref_expr_p (rhs))
         {
           fprintf (virtualize_dump_file, "Too many operators!"); // TODO
@@ -3017,36 +3083,36 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
         {
         /* Arithmetic operators (+ - * / %). */
         case PLUS_EXPR:
-          dump_operator_overload (return_type, NULL, "+", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, "+", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case MINUS_EXPR:
-          dump_operator_overload (return_type, NULL, "-", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, "-", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case MULT_EXPR:
-          dump_operator_overload (return_type, NULL, "*", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, "*", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case TRUNC_DIV_EXPR:
-          dump_operator_overload (return_type, NULL, "/", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, "/", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case TRUNC_MOD_EXPR:
-          dump_operator_overload (return_type, NULL, "%%", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, "%%", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
 
         /* Bitwise operators (^ & | << >>). */
         case LSHIFT_EXPR:
-          dump_operator_overload (return_type, NULL, "<<", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, "<<", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case RSHIFT_EXPR:
-          dump_operator_overload (return_type, NULL, ">>", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, ">>", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case BIT_IOR_EXPR:
-          dump_operator_overload (return_type, NULL, "|", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, "|", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case BIT_XOR_EXPR:
-          dump_operator_overload (return_type, NULL, "^", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, "^", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case BIT_AND_EXPR:
-          dump_operator_overload (return_type, NULL, "&", TREE_TYPE (rhs));
+          dump_operator_overload (return_type, "&", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
 
         default:
@@ -3057,14 +3123,18 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   /* Binary operators < > == != <= >= */
   else if (COMPARISON_CLASS_P (expr))
     {
+      tree lhs = TREE_OPERAND (expr, 0);
+      tree rhs = TREE_OPERAND (expr, 1);
+
+#if 0
       fprintf (virtualize_dump_file, "binary op:\n"); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      tree lhs = TREE_OPERAND (expr, 0);
       dump_node (lhs, 0, virtualize_dump_file); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      tree rhs = TREE_OPERAND (expr, 1);
       dump_node (rhs, 0, virtualize_dump_file); // TODO
       fprintf (virtualize_dump_file, "========================================\n"); // TODO
+#endif
+
       if (non_ref_expr_p (rhs))
         {
           fprintf (virtualize_dump_file, "Too many operators!"); // TODO
@@ -3074,22 +3144,22 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       switch (TREE_CODE (expr))
         {
         case LT_EXPR:
-          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator<(lhs, rhs)\n"); // TODO
+          dump_operator_overload (return_type, "<", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case LE_EXPR:
-          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator<=(lhs, rhs)\n"); // TODO
+          dump_operator_overload (return_type, "<=", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case GT_EXPR:
-          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator>(lhs, rhs)\n"); // TODO
+          dump_operator_overload (return_type, ">", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case GE_EXPR:
-          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator>=(lhs, rhs)\n"); // TODO
+          dump_operator_overload (return_type, ">=", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case EQ_EXPR:
-          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator==(lhs, rhs)\n"); // TODO
+          dump_operator_overload (return_type, "==", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         case NE_EXPR:
-          fprintf (virtualize_dump_file, "Virtualize <return-type> [T::]operator!=(lhs, rhs)\n"); // TODO
+          dump_operator_overload (return_type, "!=", TREE_TYPE (lhs), TREE_TYPE (rhs));
           return true;
         default:
             // TODO: Diagnose.
@@ -3165,8 +3235,9 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 bool
 virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic_concept)
 {
-  // TODO: Virtualize a function.
+#if 0
   dump_node (t, 0, virtualize_dump_file); // TODO
+#endif
 
   tree type = ICONV_CONSTR_TYPE (t);
   tree expr = ICONV_CONSTR_EXPR (t);
@@ -3225,11 +3296,11 @@ virtualize_argument_deduction_constraint (tree, tree, tree)
 }
 
 bool
-virtualize_exception_constraint (tree t, tree, tree)
+virtualize_exception_constraint (tree, tree, tree)
 {
   // TODO: Associate this with an existing function, or maybe just record it
   // for later.
-  dump_node (t, 0, virtualize_dump_file); // TODO
+  //  dump_node (t, 0, virtualize_dump_file); // TODO
   return true;
 }
 
@@ -3238,7 +3309,7 @@ virtualize_exception_constraint (tree t, tree, tree)
 bool
 virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
 {
-  fprintf (virtualize_dump_file, "virtualize_constraint\n");
+  //  fprintf (virtualize_dump_file, "virtualize_constraint\n");
 
 #if 0
   location_t loc = tree_nonartificial_location(t);
@@ -3251,7 +3322,7 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
   fprintf (virtualize_dump_file, "proto_parm:\n");
   dump_node (proto_parm, int(0), virtualize_dump_file);
 #endif
-#if 1
+#if 0
   fprintf (virtualize_dump_file, "dynamic_concept:\n");
   dump_node (dynamic_concept, int(0), virtualize_dump_file);
 #endif
@@ -3265,42 +3336,42 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
   switch (TREE_CODE (t))
     {
     case CONJ_CONSTR:
-      fprintf (virtualize_dump_file, "virtualize_conjunction_constraint\n");
+      //fprintf (virtualize_dump_file, "virtualize_conjunction_constraint\n");
       return virtualize_conjunction_constraint (t, proto_parm, dynamic_concept);
 
     case DISJ_CONSTR:
-      fprintf (virtualize_dump_file, "virtualize_disjunction_constraint\n");
+      //fprintf (virtualize_dump_file, "virtualize_disjunction_constraint\n");
       // TODO: Diagnose.
       return false;
 
     case PRED_CONSTR:
       /* Predicate constraints are not virtualized. */
-      fprintf (virtualize_dump_file, "virtualize_predicate_constraint\n");
+      //fprintf (virtualize_dump_file, "virtualize_predicate_constraint\n");
       return true;
 
     case PARM_CONSTR:
-      fprintf (virtualize_dump_file, "virtualize_parameterized_constraint\n");
+      //fprintf (virtualize_dump_file, "virtualize_parameterized_constraint\n");
       return virtualize_parameterized_constraint (t, proto_parm, dynamic_concept);
 
     case EXPR_CONSTR:
-      fprintf (virtualize_dump_file, "virtualize_expression_constraint\n");
+      //fprintf (virtualize_dump_file, "virtualize_expression_constraint\n");
       return virtualize_expression_constraint (t, proto_parm, dynamic_concept);
 
     case TYPE_CONSTR:
       /* Type constraints are not virtualized. */
-      fprintf (virtualize_dump_file, "virtualize_type_constraint\n");
+      //fprintf (virtualize_dump_file, "virtualize_type_constraint\n");
       return true;
 
     case ICONV_CONSTR:
-      fprintf (virtualize_dump_file, "virtualize_implicit_conversion_constraint\n");
+      //fprintf (virtualize_dump_file, "virtualize_implicit_conversion_constraint\n");
       return virtualize_implicit_conversion_constraint(t, proto_parm, dynamic_concept);
 
     case DEDUCT_CONSTR:
-      fprintf (virtualize_dump_file, "virtualize_argument_deduction_constraint\n");
+      //fprintf (virtualize_dump_file, "virtualize_argument_deduction_constraint\n");
       return virtualize_argument_deduction_constraint (t, proto_parm, dynamic_concept);
 
     case EXCEPT_CONSTR:
-      fprintf (virtualize_dump_file, "virtualize_exception_constraint\n");
+      //fprintf (virtualize_dump_file, "virtualize_exception_constraint\n");
       return virtualize_exception_constraint (t, proto_parm, dynamic_concept);
 
     default:

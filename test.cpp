@@ -20,7 +20,7 @@ struct wrapper
 #if 1
 template <typename T, typename U>
 concept bool Addable () {
-    return requires (T t, T & tref, U u, wrapper<T> wt) {
+    return requires (T t, T & tref, U u, wrapper<T> wt, T * tptr, int * intptr) {
 #if 0 // Unary ops
         {!t} -> T;
         {~t} -> T;
@@ -28,8 +28,8 @@ concept bool Addable () {
         {+t} -> T;
         {&t} -> T const *;
         {*t} -> T;
-        {*t3} -> T;
-        {*i} -> T;
+        {*tptr} -> T; // weird; should this tautology result in an implcit conversion op?
+        {*intptr} -> T;
         {++t} -> T &;
         {t++} -> T &;
         {--t} -> T &;
@@ -48,19 +48,19 @@ concept bool Addable () {
         {t ^=  t} -> T &;
         {t &=  t} -> T &;
 #endif
-#if 0 // Non-mutating binary ops
-        {t << t} -> bool;
-        {t >> t} -> bool;
-        {t |  t} -> bool;
-        {t ^  t} -> bool;
-        {t &  t} -> bool;
-        {t && t} -> bool;
-        {t || t} -> bool;
-        {t +  t} -> bool;
-        {t -  t} -> bool;
-        {t *  t} -> bool;
-        {t /  t} -> bool;
-        {t %  t} -> bool;
+#if 1 // Non-mutating binary ops
+        {t << t} -> T;
+        {t >> t} -> T;
+        {t |  t} -> T;
+        {t ^  t} -> T;
+        {t &  t} -> T;
+        {t && t} -> T;
+        {t || t} -> T;
+        {t +  t} -> T;
+        {t -  t} -> T;
+        {t *  t} -> T;
+        {t /  t} -> T;
+        {t %  t} -> T;
         {t && t} -> bool;
         {t || t} -> bool;
         {t ,  t} -> T &;
@@ -72,12 +72,12 @@ concept bool Addable () {
         {t == t} -> bool;
         {t != t} -> bool;
 #endif
-#if 1
+#if 0
 //        {wt[u]} -> T &;
 //        {tref[u]} -> T &;
 //        {t[u]} -> T &;
 //        {u[t]} -> T &;
-        {tref = 1} -> T &;
+//        {tref = 1} -> T &;
 #endif
     };
 }
