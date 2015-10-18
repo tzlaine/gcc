@@ -2628,27 +2628,27 @@ diagnose_constraints (location_t loc, tree t, tree args)
 extern void dump_node (const_tree t, int flags, FILE *stream); // TODO
 FILE* virtualize_dump_file = NULL;
 
-bool virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept);
-
 namespace {
 
+bool virtualize_constraint_impl (tree t, tree proto_parm, tree dynamic_concept, int& special_functions);
+
 bool
-virtualize_conjunction_constraint (tree t, tree proto_parm, tree dynamic_concept)
+virtualize_conjunction_constraint (tree t, tree proto_parm, tree dynamic_concept, int& special_functions)
 {
   return
-    virtualize_constraint (TREE_OPERAND (t, 0), proto_parm, dynamic_concept) &&
-    virtualize_constraint (TREE_OPERAND (t, 1), proto_parm, dynamic_concept);
+    virtualize_constraint_impl (TREE_OPERAND (t, 0), proto_parm, dynamic_concept, special_functions) &&
+    virtualize_constraint_impl (TREE_OPERAND (t, 1), proto_parm, dynamic_concept, special_functions);
 }
 
 bool
-virtualize_parameterized_constraint (tree t, tree proto_parm, tree dynamic_concept)
+virtualize_parameterized_constraint (tree t, tree proto_parm, tree dynamic_concept, int& special_functions)
 {
   //  dump_node (PARM_CONSTR_PARMS (t), 0, virtualize_dump_file); // TODO
-  return virtualize_constraint (PARM_CONSTR_OPERAND (t), proto_parm, dynamic_concept);
+  return virtualize_constraint_impl (PARM_CONSTR_OPERAND (t), proto_parm, dynamic_concept, special_functions);
 }
 
 bool
-virtualize_expression_constraint (tree, tree, tree)
+virtualize_expression_constraint (tree, tree, tree, int&)
 {
   // TODO: Only accept ctors and dtors here.
   //  dump_node (t, 0, virtualize_dump_file); // TODO
@@ -2772,10 +2772,69 @@ dump_implicit_conversion_operator (tree return_type, tree struct_)
   fprintf(virtualize_dump_file, pp_formatted_text (&pp));
 }
 
+void
+dump_constructor (tree struct_, special_function_kind sfk)
+{
+  cxx_pretty_printer pp;
+  pp.type_id(struct_);
+  pp_string (&pp, "::");
+  pp.type_id(struct_);
+  pp_string (&pp, " (");
+  if (sfk == sfk_copy_constructor)
+    {
+      pp_string (&pp, "const ");
+      pp.type_id(struct_);
+      pp_string (&pp, "&");
+    }
+  else if (sfk == sfk_move_constructor)
+    {
+      pp.type_id(struct_);
+      pp_string (&pp, "&&");
+    }
+  pp_string (&pp, ");\n");
+  fprintf(virtualize_dump_file, pp_formatted_text (&pp));
+}
+
+void
+dump_assignment_operator (tree struct_, special_function_kind sfk)
+{
+  cxx_pretty_printer pp;
+  pp.type_id(struct_);
+  pp_string (&pp, "& ");
+  pp.type_id(struct_);
+  pp_string (&pp, "::");
+  pp.type_id(struct_);
+  pp_string (&pp, " (");
+  if (sfk == sfk_copy_assignment)
+    {
+      pp_string (&pp, "const ");
+      pp.type_id(struct_);
+      pp_string (&pp, "&");
+    }
+  else if (sfk == sfk_move_assignment)
+    {
+      pp.type_id(struct_);
+      pp_string (&pp, "&&");
+    }
+  pp_string (&pp, ");\n");
+  fprintf(virtualize_dump_file, pp_formatted_text (&pp));
+}
+
+void
+dump_destructor (tree struct_)
+{
+  cxx_pretty_printer pp;
+  pp.type_id(struct_);
+  pp_string (&pp, "::~");
+  pp.type_id(struct_);
+  pp_string (&pp, " ();\n");
+  fprintf(virtualize_dump_file, pp_formatted_text (&pp));
+}
+
 bool
 virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
                                                 tree proto_parm, bool expr_uses_prototype_parm,
-                                                tree dynamic_concept)
+                                                tree dynamic_concept, int& /*special_functions*/)
 {
   if (!expr_uses_prototype_parm)
     {
@@ -3317,7 +3376,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 }
 
 bool
-virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic_concept)
+virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic_concept, int& special_functions)
 {
   tree type = ICONV_CONSTR_TYPE (t);
   tree expr = ICONV_CONSTR_EXPR (t);
@@ -3341,7 +3400,7 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
   if (!virtualize_implicit_conversion_constraint_impl
       (expr, type, proto_parm,
        expr_uses_prototype_parm,
-       dynamic_concept))
+       dynamic_concept, special_functions))
     {
       return false;
     }
@@ -3350,7 +3409,7 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
 }
 
 bool
-virtualize_argument_deduction_constraint (tree, tree, tree)
+virtualize_argument_deduction_constraint (tree, tree, tree, int&)
 {
   // TODO: Traverse the list of placeholders, replacing each occurance of
   // concept C with the "any C" type.  If the resulting type is not dependent,
@@ -3376,7 +3435,7 @@ virtualize_argument_deduction_constraint (tree, tree, tree)
 }
 
 bool
-virtualize_exception_constraint (tree, tree, tree)
+virtualize_exception_constraint (tree, tree, tree, int&)
 {
   // TODO: Associate this with an existing function, or maybe just record it
   // for later.
@@ -3384,10 +3443,8 @@ virtualize_exception_constraint (tree, tree, tree)
   return true;
 }
 
-} /* namespace */
-
 bool
-virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
+virtualize_constraint_impl (tree t, tree proto_parm, tree dynamic_concept, int& special_functions)
 {
   if (!t)
     return NULL_TREE;
@@ -3398,7 +3455,7 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
   switch (TREE_CODE (t))
     {
     case CONJ_CONSTR:
-      return virtualize_conjunction_constraint (t, proto_parm, dynamic_concept);
+      return virtualize_conjunction_constraint (t, proto_parm, dynamic_concept, special_functions);
 
     case DISJ_CONSTR:
       // TODO: Diagnose.
@@ -3409,26 +3466,67 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
       return true;
 
     case PARM_CONSTR:
-      return virtualize_parameterized_constraint (t, proto_parm, dynamic_concept);
+      return virtualize_parameterized_constraint (t, proto_parm, dynamic_concept, special_functions);
 
     case EXPR_CONSTR:
-      return virtualize_expression_constraint (t, proto_parm, dynamic_concept);
+      return virtualize_expression_constraint (t, proto_parm, dynamic_concept, special_functions);
 
     case TYPE_CONSTR:
       /* Type constraints are not virtualized. */
       return true;
 
     case ICONV_CONSTR:
-      return virtualize_implicit_conversion_constraint(t, proto_parm, dynamic_concept);
+      return virtualize_implicit_conversion_constraint(t, proto_parm, dynamic_concept, special_functions);
 
     case DEDUCT_CONSTR:
-      return virtualize_argument_deduction_constraint (t, proto_parm, dynamic_concept);
+      return virtualize_argument_deduction_constraint (t, proto_parm, dynamic_concept, special_functions);
 
     case EXCEPT_CONSTR:
-      return virtualize_exception_constraint (t, proto_parm, dynamic_concept);
+      return virtualize_exception_constraint (t, proto_parm, dynamic_concept, special_functions);
 
     default:
       gcc_unreachable();
     }
   return error_mark_node;
+}
+
+} /* namespace */
+
+bool
+virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
+{
+  int special_functions = 0;
+  if (virtualize_constraint_impl (t, proto_parm, dynamic_concept, special_functions))
+    {
+      /* Default ctor. */
+      if (!(special_functions & (1 << sfk_constructor)) &&
+          !(special_functions & (1 << sfk_copy_constructor)) &&
+          !(special_functions & (1 << sfk_move_constructor)))
+        dump_constructor (dynamic_concept, sfk_constructor);
+
+      /* Copy ctor. */
+      if (!(special_functions & (1 << sfk_copy_constructor)))
+        dump_constructor (dynamic_concept, sfk_copy_constructor);
+
+      /* Copy assign. */
+      if (!(special_functions & (1 << sfk_copy_assignment)))
+        dump_assignment_operator (dynamic_concept, sfk_copy_assignment);
+
+      /* Move ctor and assign. */
+      if (!(special_functions & (1 << sfk_move_constructor)) &&
+          !(special_functions & (1 << sfk_move_assignment)) &&
+          !(special_functions & (1 << sfk_copy_constructor)) &&
+          !(special_functions & (1 << sfk_copy_assignment)) &&
+          !(special_functions & (1 << sfk_destructor)))
+        {
+          dump_constructor (dynamic_concept, sfk_move_constructor);
+          dump_assignment_operator (dynamic_concept, sfk_move_assignment);
+        }
+
+      dump_destructor (dynamic_concept);
+
+      return true;
+    }
+
+  return false;
 }
