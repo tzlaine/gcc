@@ -55,7 +55,7 @@ concept bool Addable () {
         {t ^=  t} -> T &;
         {t &=  t} -> T &;
 #endif
-#if 1 // Non-mutating binary ops
+#if 0 // Non-mutating binary ops
         {t << t} -> T;
         {0 << t} -> T;
         {t >> t} -> T;
@@ -100,7 +100,7 @@ concept bool Addable () {
         {t != t} -> bool;
         {0 != t} -> bool;
 #endif
-#if 0 // Calls to regular member functions, free functions, and call operators.
+#if 1 // Calls to regular member functions, free functions, and call operators.
 //        {u(tref)} -> T &; // not virtualizable
 //        {get_fn<T>()()} -> T &; // not virtualizable
 

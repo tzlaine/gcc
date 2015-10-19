@@ -2630,25 +2630,36 @@ FILE* virtualize_dump_file = NULL;
 
 namespace {
 
-bool virtualize_constraint_impl (tree t, tree proto_parm, tree dynamic_concept, int& special_functions);
+bool virtualize_constraint_impl (int pass, tree t, tree proto_parm,
+                                 tree dynamic_concept, int& special_functions,
+                                 tree* constrained_exprs, tree* noexcept_exprs);
 
 bool
-virtualize_conjunction_constraint (tree t, tree proto_parm, tree dynamic_concept, int& special_functions)
+virtualize_conjunction_constraint (int pass, tree t, tree proto_parm,
+                                   tree dynamic_concept, int& special_functions,
+                                   tree* constrained_exprs, tree* noexcept_exprs)
 {
   return
-    virtualize_constraint_impl (TREE_OPERAND (t, 0), proto_parm, dynamic_concept, special_functions) &&
-    virtualize_constraint_impl (TREE_OPERAND (t, 1), proto_parm, dynamic_concept, special_functions);
+    virtualize_constraint_impl
+    (pass, TREE_OPERAND (t, 0), proto_parm, dynamic_concept,
+     special_functions, constrained_exprs, noexcept_exprs) &&
+    virtualize_constraint_impl
+    (pass, TREE_OPERAND (t, 1), proto_parm, dynamic_concept,
+     special_functions, constrained_exprs, noexcept_exprs);
 }
 
 bool
-virtualize_parameterized_constraint (tree t, tree proto_parm, tree dynamic_concept, int& special_functions)
+virtualize_parameterized_constraint (int pass, tree t, tree proto_parm,
+                                     tree dynamic_concept, int& special_functions,
+                                     tree* constrained_exprs, tree* noexcept_exprs)
 {
-  //  dump_node (PARM_CONSTR_PARMS (t), 0, virtualize_dump_file); // TODO
-  return virtualize_constraint_impl (PARM_CONSTR_OPERAND (t), proto_parm, dynamic_concept, special_functions);
+  return virtualize_constraint_impl
+    (pass, PARM_CONSTR_OPERAND (t), proto_parm, dynamic_concept,
+     special_functions, constrained_exprs, noexcept_exprs);
 }
 
 bool
-virtualize_expression_constraint (tree, tree, tree, int&)
+virtualize_expression_constraint (tree, tree, tree, int&, tree*)
 {
   // TODO: Only accept ctors and dtors here.
   //  dump_node (t, 0, virtualize_dump_file); // TODO
@@ -2726,7 +2737,8 @@ type_is_rvalue_ref (tree type)
 }
 
 void
-dump_operator_overload_impl (tree return_type, tree struct_, const char* op, tree parm0, tree parm1, int quals)
+dump_operator_overload_impl (tree return_type, tree struct_, const char* op,
+                             tree parm0, tree parm1, int quals)
 {
   cxx_pretty_printer pp;
   pp.type_id(return_type);
@@ -2765,15 +2777,19 @@ dump_operator_overload (tree return_type, const char* op, tree lhs, tree rhs)
 }
 
 void
-dump_member_operator_overload (tree return_type, tree struct_, const char* op, tree rhs, tree lhs_parm)
+dump_member_operator_overload (tree return_type, tree struct_,
+                               const char* op, tree rhs, tree lhs_parm)
 {
-  dump_operator_overload_impl (return_type, struct_, op, rhs, NULL_TREE, cp_type_quals (TREE_TYPE (lhs_parm)));
+  dump_operator_overload_impl (return_type, struct_, op, rhs,
+                               NULL_TREE, cp_type_quals (TREE_TYPE (lhs_parm)));
 }
 
 void
-dump_member_operator_overload (tree return_type, tree struct_, const char* op, tree lhs_parm)
+dump_member_operator_overload (tree return_type, tree struct_,
+                               const char* op, tree lhs_parm)
 {
-  dump_operator_overload_impl (return_type, struct_, op, NULL_TREE, NULL_TREE, cp_type_quals (TREE_TYPE (lhs_parm)));
+  dump_operator_overload_impl (return_type, struct_, op, NULL_TREE,
+                               NULL_TREE, cp_type_quals (TREE_TYPE (lhs_parm)));
 }
 
 void
@@ -2849,7 +2865,8 @@ dump_destructor (tree struct_)
 bool
 virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
                                                 tree proto_parm, bool expr_uses_prototype_parm,
-                                                tree dynamic_concept, int& special_functions)
+                                                tree dynamic_concept, int& special_functions,
+                                                tree* /*constrained_exprs*/, tree* /*noexcept_exprs*/)
 {
   if (!expr_uses_prototype_parm)
     {
@@ -3419,7 +3436,8 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 }
 
 bool
-virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic_concept, int& special_functions)
+virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic_concept, int& special_functions,
+                                           tree* constrained_exprs, tree* noexcept_exprs)
 {
   tree type = ICONV_CONSTR_TYPE (t);
   tree expr = ICONV_CONSTR_EXPR (t);
@@ -3443,7 +3461,8 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
   if (!virtualize_implicit_conversion_constraint_impl
       (expr, type, proto_parm,
        expr_uses_prototype_parm,
-       dynamic_concept, special_functions))
+       dynamic_concept, special_functions,
+       constrained_exprs, noexcept_exprs))
     {
       return false;
     }
@@ -3452,7 +3471,7 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
 }
 
 bool
-virtualize_argument_deduction_constraint (tree, tree, tree, int&)
+virtualize_argument_deduction_constraint (tree, tree, tree, int&, tree*, tree*)
 {
   // TODO: Traverse the list of placeholders, replacing each occurance of
   // concept C with the "any C" type.  If the resulting type is not dependent,
@@ -3478,7 +3497,7 @@ virtualize_argument_deduction_constraint (tree, tree, tree, int&)
 }
 
 bool
-virtualize_exception_constraint (tree, tree, tree, int&)
+virtualize_exception_constraint (tree, tree, tree, int&, tree*)
 {
   // TODO: Associate this with an existing function, or maybe just record it
   // for later.
@@ -3487,7 +3506,9 @@ virtualize_exception_constraint (tree, tree, tree, int&)
 }
 
 bool
-virtualize_constraint_impl (tree t, tree proto_parm, tree dynamic_concept, int& special_functions)
+virtualize_constraint_impl (int pass, tree t, tree proto_parm, tree dynamic_concept,
+                            int& special_functions, tree* constrained_exprs,
+                            tree* noexcept_exprs)
 {
   if (!t)
     return NULL_TREE;
@@ -3498,7 +3519,8 @@ virtualize_constraint_impl (tree t, tree proto_parm, tree dynamic_concept, int& 
   switch (TREE_CODE (t))
     {
     case CONJ_CONSTR:
-      return virtualize_conjunction_constraint (t, proto_parm, dynamic_concept, special_functions);
+      return virtualize_conjunction_constraint
+        (pass, t, proto_parm, dynamic_concept, special_functions, constrained_exprs, noexcept_exprs);
 
     case DISJ_CONSTR:
       // TODO: Diagnose.
@@ -3509,23 +3531,36 @@ virtualize_constraint_impl (tree t, tree proto_parm, tree dynamic_concept, int& 
       return true;
 
     case PARM_CONSTR:
-      return virtualize_parameterized_constraint (t, proto_parm, dynamic_concept, special_functions);
+      return virtualize_parameterized_constraint
+        (pass, t, proto_parm, dynamic_concept, special_functions, constrained_exprs, noexcept_exprs);
 
     case EXPR_CONSTR:
-      return virtualize_expression_constraint (t, proto_parm, dynamic_concept, special_functions);
+      if (pass == 1)
+        return true;
+      return virtualize_expression_constraint
+        (t, proto_parm, dynamic_concept, special_functions, constrained_exprs);
 
     case TYPE_CONSTR:
       /* Type constraints are not virtualized. */
       return true;
 
     case ICONV_CONSTR:
-      return virtualize_implicit_conversion_constraint(t, proto_parm, dynamic_concept, special_functions);
+      if (pass == 0)
+        return true;
+      return virtualize_implicit_conversion_constraint
+        (t, proto_parm, dynamic_concept, special_functions, constrained_exprs, noexcept_exprs);
 
     case DEDUCT_CONSTR:
-      return virtualize_argument_deduction_constraint (t, proto_parm, dynamic_concept, special_functions);
+      if (pass == 0)
+        return true;
+      return virtualize_argument_deduction_constraint
+        (t, proto_parm, dynamic_concept, special_functions, constrained_exprs, noexcept_exprs);
 
     case EXCEPT_CONSTR:
-      return virtualize_exception_constraint (t, proto_parm, dynamic_concept, special_functions);
+      if (pass == 1)
+        return true;
+      return virtualize_exception_constraint
+        (t, proto_parm, dynamic_concept, special_functions, noexcept_exprs);
 
     default:
       gcc_unreachable();
@@ -3539,7 +3574,13 @@ bool
 virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
 {
   int special_functions = 0;
-  if (virtualize_constraint_impl (t, proto_parm, dynamic_concept, special_functions))
+  // TODO: Do this properly!
+  tree constrained_exprs[1024] = {NULL_TREE};
+  tree noexcept_exprs[1024] = {NULL_TREE};
+  if (virtualize_constraint_impl
+      (0, t, proto_parm, dynamic_concept, special_functions, constrained_exprs, noexcept_exprs)
+    && virtualize_constraint_impl
+      (1, t, proto_parm, dynamic_concept, special_functions, constrained_exprs, noexcept_exprs))
     {
       /* Default ctor. */
       if (!(special_functions & (1 << sfk_constructor)) &&
