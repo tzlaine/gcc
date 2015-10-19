@@ -1,3 +1,5 @@
+// g++ --std=c++1z -o test test.cpp -fpermissive --dump-translation-unit
+
 template <typename T>
 struct id
 {
@@ -121,7 +123,15 @@ concept bool Addable () {
 
         //{T()} -> T; // Should not work, and doesn't, but it crashes!
 
-        {T()};
+        {~T(1.0)};
+        {~T()};
+//        {T()};
+//        {T(0.0, 1)};
+//        {U()};
+//        {wrapper<T>()};
+//        {foo(0)};
+
+//        {get_fn<T>()};
 #endif
     };
 }

@@ -2910,16 +2910,99 @@ virtualize_parameterized_constraint (int pass, tree t, tree proto_parm,
 }
 
 bool
-virtualize_expression_constraint (tree t, tree, tree, int&, trees_array& unvirtualized_constraints)
+virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
+                                  int& special_functions, trees_array& unvirtualized_constraints)
 {
+  tree expr = EXPR_CONSTR_EXPR (t);
+
+  if (!uses_prototype_parm_p (expr, proto_parm))
+    {
+      /* Nothing to virtualize, but that's not a problem. */
+      fprintf (virtualize_dump_file, "Not virtualized, because expr does not use T.\n"); // TODO
+      return true;
+    }
+
   // TODO: Only accept ctors and dtors here (place other expressions into unvirtualized_constraints).
   fprintf (virtualize_dump_file, "========================================\n"); // TODO
   fprintf (virtualize_dump_file, "expression_constraint:\n"); // TODO
   dump_node (t, 0, virtualize_dump_file); // TODO
   fprintf (virtualize_dump_file, "========================================\n"); // TODO
 
-  // TODO if (!handled)
-  record_unvirtualized_constraint (t, unvirtualized_constraints);
+  bool handled = false;
+
+  /* Handle this operator specially, as it might be a dtor. */
+  if (TREE_CODE (expr) == BIT_NOT_EXPR)
+    {
+      tree bit_not_operand = TREE_OPERAND (expr, 0);
+      if (TREE_CODE (bit_not_operand) == CAST_EXPR)
+        {
+          tree args = TREE_OPERAND (bit_not_operand, 0);
+          if (!args)
+            {
+              fprintf (virtualize_dump_file, "Looks like a dtor!\n"); // TODO
+              special_functions |= 1 << sfk_destructor;
+              handled = true;
+            }
+        }
+    }
+  else if (TREE_CODE (expr) == CAST_EXPR)
+    {
+      fprintf (virtualize_dump_file, "cast expression:\n"); // TODO
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+      fprintf (virtualize_dump_file, "expr:\n"); // TODO
+      dump_node (expr, 0, virtualize_dump_file); // TODO
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+      fprintf (virtualize_dump_file, "purpose:\n"); // TODO
+      tree args = TREE_OPERAND (expr, 0);
+      tree purpose = args ? TREE_PURPOSE (args) : NULL_TREE;
+      if (purpose)
+        dump_node (purpose, 0, virtualize_dump_file); // TODO
+      else
+        fprintf (virtualize_dump_file, "[NONE]\n"); // TODO
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+
+      tree type = TREE_TYPE (expr);
+#if 1
+      fprintf (virtualize_dump_file, "type: \n"); // TODO
+      if (type)
+        dump_node (type, 0, virtualize_dump_file); // TODO
+      else
+        fprintf (virtualize_dump_file, "[NONE]\n"); // TODO
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+#endif
+
+      if (same_type_p (type, TREE_TYPE (proto_parm)))
+        {
+          if (args)
+          {
+            fprintf (virtualize_dump_file, "Looks like a non-default ctor!\n"); // TODO
+            special_functions |= 1 << sfk_constructor;
+            /* Non-default ctors are not virtualized. */
+            handled = true;
+          }
+          else
+          {
+            fprintf (virtualize_dump_file, "Looks like a default ctor!\n"); // TODO
+            special_functions |= 1 << sfk_constructor;
+            dump_constructor (dynamic_concept, sfk_constructor);
+            handled = true;
+          }
+        }
+      else
+        {
+          fprintf (virtualize_dump_file, "Looks like a ctor call for a template parameter that's not the prototype\n"); // TODO
+          /* Not virtualized, but ignorable; treat this cast as a de facto type constraint. */
+          handled = true;
+        }
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+    }
+
+  if (!handled)
+    {
+      record_unvirtualized_constraint (t, unvirtualized_constraints);
+      fprintf (virtualize_dump_file, "Record this one for later!\n"); // TODO
+      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+    }
 
   return true;
 }
@@ -2958,6 +3041,9 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 #endif
       return true;
     }
+
+  // TODO: Binary operators and super-unary functions cannot have more than
+  // one param using the prototype parameter.
 
   /* Explicitly disallow references to non-function members in expr. */
   if (TREE_CODE (expr) == COMPONENT_REF)
@@ -3524,7 +3610,7 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
   if (!type_uses_prototype_parm && !expr_uses_prototype_parm)
     {
       /* Nothing to virtualize, but that's not a problem. */
-      fprintf (virtualize_dump_file, "Not virtualized, because niether expr nor type uses T.\n"); // TODO
+      fprintf (virtualize_dump_file, "Not virtualized, because neither expr nor type uses T.\n"); // TODO
       return true;
     }
 
