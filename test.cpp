@@ -41,7 +41,7 @@ concept bool Addable () {
         {--t} -> T &;
         {t--} -> T &;
 #endif
-#if 1 // Mutating binary ops
+#if 0 // Mutating binary ops
         {t =   t} -> T &;
         {t =   t_rvalue_ref} -> T &;
         {t +=  t} -> T &;
@@ -55,7 +55,7 @@ concept bool Addable () {
         {t ^=  t} -> T &;
         {t &=  t} -> T &;
 #endif
-#if 0 // Non-mutating binary ops
+#if 1 // Non-mutating binary ops
         {t << t} -> T;
         {0 << t} -> T;
         {t >> t} -> T;
@@ -64,7 +64,7 @@ concept bool Addable () {
         {0 |  t} -> T;
         {t ^  t} -> T;
         {0 ^  t} -> T;
-        {t &  t} -> T;
+        {tref &  tref} -> T;
         {0 &  t} -> T;
         {t && t} -> T;
         {0 && t} -> T;
@@ -72,7 +72,7 @@ concept bool Addable () {
         {0 || t} -> T;
         {t +  t} -> T;
         {0 +  t} -> T;
-        {t -  t} -> T;
+        {t -  t_rvalue_ref} -> T;
         {0 -  t} -> T;
         {t *  t} -> T;
         {0 *  t} -> T;

@@ -2716,6 +2716,15 @@ bool is_prototype_parm_ref_p (tree t, tree proto_parm)
   return same_type_ignoring_top_level_qualifiers_p (t, TREE_TYPE (proto_parm));
 }
 
+bool
+type_is_rvalue_ref (tree type)
+{
+  return TREE_CODE (type) == REFERENCE_TYPE
+    && TYPE_REF_IS_RVALUE (type)
+    /* Functions are always lvalues.  */
+    && TREE_CODE (TREE_TYPE (type)) != FUNCTION_TYPE;
+}
+
 void
 dump_operator_overload_impl (tree return_type, tree struct_, const char* op, tree parm0, tree parm1, int quals)
 {
@@ -2728,11 +2737,17 @@ dump_operator_overload_impl (tree return_type, tree struct_, const char* op, tre
   pp_string (&pp, op);
   pp_string (&pp, " (");
   if (parm0)
-    pp.type_id(parm0);
+    {
+      pp.type_id(parm0);
+      if (type_is_rvalue_ref (parm0))
+        pp_character(&pp, '&');
+    }
   if (parm1)
     {
       pp_string (&pp, ", ");
       pp.type_id(parm1);
+      if (type_is_rvalue_ref (parm1))
+        pp_character(&pp, '&');
     }
   pp_string (&pp, " )");
   if (quals & TYPE_QUAL_CONST)
@@ -3099,6 +3114,8 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
         }
 
       tree rhs_type = TREE_TYPE (rhs);
+      if (TREE_CODE (rhs) == INDIRECT_REF)
+        rhs_type = TREE_TYPE (TREE_OPERAND (rhs, 0));
 
       switch (TREE_CODE (op))
       {
@@ -3111,8 +3128,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
               ref = TREE_OPERAND (ref, 0);
 
             if (TREE_TYPE (ref)
-                && TREE_CODE (TREE_TYPE (ref)) == REFERENCE_TYPE
-                && TYPE_REF_IS_RVALUE (TREE_TYPE (ref))
+                && type_is_rvalue_ref (TREE_TYPE (ref))
                 && !VAR_P (ref)
                 && TREE_CODE (ref) != COMPONENT_REF
                 /* Functions are always lvalues.  */
@@ -3170,6 +3186,8 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
         }
 
       tree rhs_type = TREE_TYPE (rhs);
+      if (TREE_CODE (rhs) == INDIRECT_REF)
+        rhs_type = TREE_TYPE (TREE_OPERAND (rhs, 0));
 
       switch (TREE_CODE (expr))
         {
@@ -3255,6 +3273,8 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
         }
 
       tree rhs_type = TREE_TYPE (rhs);
+      if (TREE_CODE (rhs) == INDIRECT_REF)
+        rhs_type = TREE_TYPE (TREE_OPERAND (rhs, 0));
 
       switch (TREE_CODE (expr))
         {
