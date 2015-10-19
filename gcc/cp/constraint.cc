@@ -2690,7 +2690,7 @@ type_is_rvalue_ref (tree type)
 
 void
 dump_operator_overload_impl (tree return_type, tree struct_, const char* op,
-                             tree parm0, tree parm1, int quals)
+                             tree parm0, tree parm1, int quals, bool noexcept_)
 {
   cxx_pretty_printer pp;
   pp.type_id(return_type);
@@ -2718,40 +2718,45 @@ dump_operator_overload_impl (tree return_type, tree struct_, const char* op,
     pp_string (&pp, " const");
   if (quals & TYPE_QUAL_VOLATILE)
     pp_string (&pp, " volatile");
+  if (noexcept_)
+    pp_string (&pp, " noexcept");
   pp_string (&pp, ";\n");
   fprintf(virtualize_dump_file, pp_formatted_text (&pp));
 }
 
 void
-dump_operator_overload (tree return_type, const char* op, tree lhs, tree rhs)
+dump_operator_overload (tree return_type, const char* op, tree lhs, tree rhs, bool noexcept_)
 {
-  dump_operator_overload_impl (return_type, NULL_TREE, op, lhs, rhs, 0);
+    dump_operator_overload_impl (return_type, NULL_TREE, op, lhs, rhs, 0, noexcept_);
 }
 
 void
 dump_member_operator_overload (tree return_type, tree struct_,
-                               const char* op, tree rhs, tree lhs_parm)
+                               const char* op, tree rhs, tree lhs_parm, bool noexcept_)
 {
   dump_operator_overload_impl (return_type, struct_, op, rhs,
-                               NULL_TREE, cp_type_quals (TREE_TYPE (lhs_parm)));
+                               NULL_TREE, cp_type_quals (TREE_TYPE (lhs_parm)), noexcept_);
 }
 
 void
 dump_member_operator_overload (tree return_type, tree struct_,
-                               const char* op, tree lhs_parm)
+                               const char* op, tree lhs_parm, bool noexcept_)
 {
   dump_operator_overload_impl (return_type, struct_, op, NULL_TREE,
-                               NULL_TREE, cp_type_quals (TREE_TYPE (lhs_parm)));
+                               NULL_TREE, cp_type_quals (TREE_TYPE (lhs_parm)), noexcept_);
 }
 
 void
-dump_implicit_conversion_operator (tree return_type, tree struct_)
+dump_implicit_conversion_operator (tree return_type, tree struct_, bool noexcept_)
 {
   cxx_pretty_printer pp;
   pp.type_id(struct_);
   pp_string (&pp, "::operator");
   pp.type_id(return_type);
-  pp_string (&pp, " ();\n");
+  pp_string (&pp, " ()");
+  if (noexcept_)
+    pp_string (&pp, " noexcept");
+  pp_string (&pp, ";\n");
   fprintf(virtualize_dump_file, pp_formatted_text (&pp));
 }
 
@@ -2991,7 +2996,7 @@ bool
 virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
                                                 tree proto_parm, bool expr_uses_prototype_parm,
                                                 tree dynamic_concept, int& special_functions,
-                                                bool /*TODO noexcept_*/)
+                                                bool noexcept_)
 {
   if (!expr_uses_prototype_parm)
     {
@@ -3031,7 +3036,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           return false;
         }
 
-      dump_member_operator_overload (return_type, dynamic_concept, "&", operand);
+      dump_member_operator_overload (return_type, dynamic_concept, "&", operand, noexcept_);
       return true;
     }
   /* Dereference operator (*). */
@@ -3050,7 +3055,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 
       if (pointer_deref)
         {
-          dump_implicit_conversion_operator (return_type, dynamic_concept);
+          dump_implicit_conversion_operator (return_type, dynamic_concept, noexcept_);
           return true;
         }
       else
@@ -3063,7 +3068,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
               return false;
             }
 
-          dump_member_operator_overload (return_type, dynamic_concept, "*", operand);
+          dump_member_operator_overload (return_type, dynamic_concept, "*", operand, noexcept_);
           return true;
         }
     }
@@ -3094,7 +3099,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
           return false;
         }
-      dump_member_operator_overload (return_type, dynamic_concept, "++", operand);
+      dump_member_operator_overload (return_type, dynamic_concept, "++", operand, noexcept_);
       return true;
     }
   /* Post-increment (++). */
@@ -3106,7 +3111,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
           return false;
         }
-      dump_member_operator_overload (return_type, dynamic_concept, "++", integer_type_node, operand);
+      dump_member_operator_overload (return_type, dynamic_concept, "++", integer_type_node, operand, noexcept_);
       return true;
     }
   /* Pre-increment (--). */
@@ -3118,7 +3123,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
           return false;
         }
-      dump_member_operator_overload (return_type, dynamic_concept, "--", operand);
+      dump_member_operator_overload (return_type, dynamic_concept, "--", operand, noexcept_);
       return true;
     }
   /* Post-increment (--). */
@@ -3130,7 +3135,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
           return false;
         }
-      dump_member_operator_overload (return_type, dynamic_concept, "--", integer_type_node, operand);
+      dump_member_operator_overload (return_type, dynamic_concept, "--", integer_type_node, operand, noexcept_);
       return true;
     }
   /* Other unary operators (+ - ~). */
@@ -3146,17 +3151,17 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 
       if (TREE_CODE (expr) == UNARY_PLUS_EXPR)
         {
-          dump_member_operator_overload (return_type, dynamic_concept, "+", operand);
+          dump_member_operator_overload (return_type, dynamic_concept, "+", operand, noexcept_);
           return true;
         }
       else if (TREE_CODE (expr) == NEGATE_EXPR)
         {
-          dump_member_operator_overload (return_type, dynamic_concept, "-", operand);
+          dump_member_operator_overload (return_type, dynamic_concept, "-", operand, noexcept_);
           return true;
         }
       else if (TREE_CODE (expr) == BIT_NOT_EXPR)
         {
-          dump_member_operator_overload (return_type, dynamic_concept, "~", operand);
+          dump_member_operator_overload (return_type, dynamic_concept, "~", operand, noexcept_);
           return true;
         }
     }
@@ -3173,9 +3178,9 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       tree lhs = TREE_OPERAND (expr, 0);
       tree rhs = TREE_OPERAND (expr, 1);
       if (is_prototype_parm_ref_p (lhs, proto_parm))
-        dump_member_operator_overload (return_type, dynamic_concept, "&&", TREE_TYPE (rhs), lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "&&", TREE_TYPE (rhs), lhs, noexcept_);
       else
-        dump_operator_overload (return_type, "&&", TREE_TYPE (lhs), TREE_TYPE (rhs));
+        dump_operator_overload (return_type, "&&", TREE_TYPE (lhs), TREE_TYPE (rhs), noexcept_);
       return true;
     }
   /* Boolean-or operator (||). */
@@ -3184,9 +3189,9 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       tree lhs = TREE_OPERAND (expr, 0);
       tree rhs = TREE_OPERAND (expr, 1);
       if (is_prototype_parm_ref_p (lhs, proto_parm))
-        dump_member_operator_overload (return_type, dynamic_concept, "||", TREE_TYPE (rhs), lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "||", TREE_TYPE (rhs), lhs, noexcept_);
       else
-        dump_operator_overload (return_type, "||", TREE_TYPE (lhs), TREE_TYPE (rhs));
+        dump_operator_overload (return_type, "||", TREE_TYPE (lhs), TREE_TYPE (rhs), noexcept_);
       return true;
     }
   /* Boolean-not operator (!). */
@@ -3198,7 +3203,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
           return false;
         }
-      dump_member_operator_overload (return_type, dynamic_concept, "!", operand);
+      dump_member_operator_overload (return_type, dynamic_concept, "!", operand, noexcept_);
       return true;
     }
   /* Comma operator (,). */
@@ -3207,9 +3212,9 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       tree lhs = TREE_OPERAND (expr, 0);
       tree rhs = TREE_OPERAND (expr, 1);
       if (is_prototype_parm_ref_p (lhs, proto_parm))
-        dump_member_operator_overload (return_type, dynamic_concept, ",", TREE_TYPE (rhs), lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, ",", TREE_TYPE (rhs), lhs, noexcept_);
       else
-        dump_operator_overload (return_type, ",", TREE_TYPE (lhs), TREE_TYPE (rhs));
+        dump_operator_overload (return_type, ",", TREE_TYPE (lhs), TREE_TYPE (rhs), noexcept_);
       return true;
     }
   /* Index operator ([]). */
@@ -3230,7 +3235,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           return false;
         }
 
-      dump_member_operator_overload (return_type, dynamic_concept, "[]", TREE_TYPE (rhs), lhs);
+      dump_member_operator_overload (return_type, dynamic_concept, "[]", TREE_TYPE (rhs), lhs, noexcept_);
       return true;
     }
   /* Modifying binary operators (= += -= *= /= %= ^= &= |= >>= <<=). */
@@ -3265,7 +3270,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       switch (TREE_CODE (op))
       {
       case NOP_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "=", rhs_type, lhs, noexcept_);
         if (is_prototype_parm_ref_p (rhs, proto_parm))
           {
             tree ref = rhs;
@@ -3284,34 +3289,34 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
           }
         return true;
       case PLUS_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "+=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "+=", rhs_type, lhs, noexcept_);
         return true;
       case MINUS_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "-=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "-=", rhs_type, lhs, noexcept_);
         return true;
       case MULT_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "*=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "*=", rhs_type, lhs, noexcept_);
         return true;
       case TRUNC_DIV_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "/=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "/=", rhs_type, lhs, noexcept_);
         return true;
       case TRUNC_MOD_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "%%=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "%%=", rhs_type, lhs, noexcept_);
         return true;
       case LSHIFT_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "<<=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "<<=", rhs_type, lhs, noexcept_);
         return true;
       case RSHIFT_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, ">>=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, ">>=", rhs_type, lhs, noexcept_);
         return true;
       case BIT_IOR_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "|=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "|=", rhs_type, lhs, noexcept_);
         return true;
       case BIT_XOR_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "^=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "^=", rhs_type, lhs, noexcept_);
         return true;
       case BIT_AND_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "&=", rhs_type, lhs);
+        dump_member_operator_overload (return_type, dynamic_concept, "&=", rhs_type, lhs, noexcept_);
         return true;
       default:
         // TODO: Diagnose.
@@ -3339,65 +3344,65 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
         /* Arithmetic operators (+ - * / %). */
         case PLUS_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "+", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "+", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "+", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "+", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case MINUS_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "-", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "-", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "-", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "-", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case MULT_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "*", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "*", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "*", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "*", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case TRUNC_DIV_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "/", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "/", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "/", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "/", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case TRUNC_MOD_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "%%", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "%%", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "%%", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "%%", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
 
         /* Bitwise operators (^ & | << >>). */
         case LSHIFT_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "<<", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "<<", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "<<", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "<<", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case RSHIFT_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, ">>", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, ">>", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, ">>", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, ">>", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case BIT_IOR_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "|", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "|", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "|", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "|", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case BIT_XOR_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "^", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "^", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "^", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "^", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case BIT_AND_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "&", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "&", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "&", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "&", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
 
         default:
@@ -3425,39 +3430,39 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
         {
         case LT_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "<", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "<", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "<", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "<", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case LE_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "<=", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "<=", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "<=", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "<=", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case GT_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, ">", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, ">", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, ">", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, ">", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case GE_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, ">=", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, ">=", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, ">=", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, ">=", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case EQ_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "==", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "==", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "==", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "==", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         case NE_EXPR:
           if (is_prototype_parm_ref_p (lhs, proto_parm))
-            dump_member_operator_overload (return_type, dynamic_concept, "!=", rhs_type, lhs);
+            dump_member_operator_overload (return_type, dynamic_concept, "!=", rhs_type, lhs, noexcept_);
           else
-            dump_operator_overload (return_type, "!=", TREE_TYPE (lhs), rhs_type);
+            dump_operator_overload (return_type, "!=", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         default:
             // TODO: Diagnose.
@@ -3720,6 +3725,11 @@ virtualize_constraint_impl (int pass, tree t, tree proto_parm, tree dynamic_conc
 bool
 virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
 {
+  // TODO: Add a third pass; the first should grab noexcept constraints, the
+  // second expression constraints, and the third everything else.  This is
+  // required because the expression constraints might generate ctors/dtors
+  // that need to be tagged noexcept.
+
   int special_functions = 0;
   // TODO: Do this properly, using iterative_hash_expr() and a hash map/table.
   trees_array unvirtualized_constraints = {{NULL_TREE}, 0};
