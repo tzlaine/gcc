@@ -2630,54 +2630,6 @@ FILE* virtualize_dump_file = NULL;
 
 namespace {
 
-bool virtualize_constraint_impl (int pass, tree t, tree proto_parm,
-                                 tree dynamic_concept, int& special_functions,
-                                 tree* constrained_exprs, tree* noexcept_exprs);
-
-bool
-virtualize_conjunction_constraint (int pass, tree t, tree proto_parm,
-                                   tree dynamic_concept, int& special_functions,
-                                   tree* constrained_exprs, tree* noexcept_exprs)
-{
-  return
-    virtualize_constraint_impl
-    (pass, TREE_OPERAND (t, 0), proto_parm, dynamic_concept,
-     special_functions, constrained_exprs, noexcept_exprs) &&
-    virtualize_constraint_impl
-    (pass, TREE_OPERAND (t, 1), proto_parm, dynamic_concept,
-     special_functions, constrained_exprs, noexcept_exprs);
-}
-
-bool
-virtualize_parameterized_constraint (int pass, tree t, tree proto_parm,
-                                     tree dynamic_concept, int& special_functions,
-                                     tree* constrained_exprs, tree* noexcept_exprs)
-{
-  return virtualize_constraint_impl
-    (pass, PARM_CONSTR_OPERAND (t), proto_parm, dynamic_concept,
-     special_functions, constrained_exprs, noexcept_exprs);
-}
-
-bool
-virtualize_expression_constraint (tree, tree, tree, int&, tree*)
-{
-  // TODO: Only accept ctors and dtors here.
-  //  dump_node (t, 0, virtualize_dump_file); // TODO
-  return true;
-}
-
-tree
-virtualize_implicit_conversion_return_type (tree type, tree dynamic_concept)
-{
-  if (uses_template_parms (type))
-  {
-      tree vec = make_tree_vec (1);
-      TREE_VEC_ELT (vec, 0) = dynamic_concept;
-      type = tsubst_expr (type, vec, tf_none, NULL_TREE, false);
-  }
-  return type;
-}
-
 bool non_ref_expr_p (tree t)
 {
   return EXPR_P (t) && !INDIRECT_REF_P (t);
@@ -2860,6 +2812,54 @@ dump_destructor (tree struct_)
   pp.type_id(struct_);
   pp_string (&pp, " ();\n");
   fprintf(virtualize_dump_file, pp_formatted_text (&pp));
+}
+
+bool virtualize_constraint_impl (int pass, tree t, tree proto_parm,
+                                 tree dynamic_concept, int& special_functions,
+                                 tree* constrained_exprs, tree* noexcept_exprs);
+
+bool
+virtualize_conjunction_constraint (int pass, tree t, tree proto_parm,
+                                   tree dynamic_concept, int& special_functions,
+                                   tree* constrained_exprs, tree* noexcept_exprs)
+{
+  return
+    virtualize_constraint_impl
+    (pass, TREE_OPERAND (t, 0), proto_parm, dynamic_concept,
+     special_functions, constrained_exprs, noexcept_exprs) &&
+    virtualize_constraint_impl
+    (pass, TREE_OPERAND (t, 1), proto_parm, dynamic_concept,
+     special_functions, constrained_exprs, noexcept_exprs);
+}
+
+bool
+virtualize_parameterized_constraint (int pass, tree t, tree proto_parm,
+                                     tree dynamic_concept, int& special_functions,
+                                     tree* constrained_exprs, tree* noexcept_exprs)
+{
+  return virtualize_constraint_impl
+    (pass, PARM_CONSTR_OPERAND (t), proto_parm, dynamic_concept,
+     special_functions, constrained_exprs, noexcept_exprs);
+}
+
+bool
+virtualize_expression_constraint (tree t, tree, tree, int&, tree*)
+{
+  // TODO: Only accept ctors and dtors here.
+  //  dump_node (t, 0, virtualize_dump_file); // TODO
+  return true;
+}
+
+tree
+virtualize_implicit_conversion_return_type (tree type, tree dynamic_concept)
+{
+  if (uses_template_parms (type))
+  {
+      tree vec = make_tree_vec (1);
+      TREE_VEC_ELT (vec, 0) = dynamic_concept;
+      type = tsubst_expr (type, vec, tf_none, NULL_TREE, false);
+  }
+  return type;
 }
 
 bool
