@@ -26,10 +26,10 @@ auto get_fn ()
 #if 1
 template <typename T, typename U>
 concept bool Addable () {
-    return requires (T t, T const & tref, U u, wrapper<T> wt, T * tptr, int * intptr) {
+    return requires (T t, T const & tref, U u, wrapper<T> wt, T * tptr, int * intptr, T && t_rvalue_ref) {
 #if 0 // Unary ops
         {!t} -> T;
-        {~t} -> T;
+        {~t_rvalue_ref} -> T;
         {-tref} -> T;
         {+tref} -> T;
         {&t} -> T const *;
@@ -41,10 +41,11 @@ concept bool Addable () {
         {--t} -> T &;
         {t--} -> T &;
 #endif
-#if 0 // Mutating binary ops
+#if 1 // Mutating binary ops
         {t =   t} -> T &;
+        {t =   t_rvalue_ref} -> T &;
         {t +=  t} -> T &;
-        {t -=  t} -> T &;
+        {t -=  tref} -> T &;
         {t *=  t} -> T &;
         {t /=  t} -> T &;
         {t %=  t} -> T &;
@@ -99,11 +100,13 @@ concept bool Addable () {
         {t != t} -> bool;
         {0 != t} -> bool;
 #endif
-#if 1 // Calls to regular member functions, free functions, and call operators.
+#if 0 // Calls to regular member functions, free functions, and call operators.
 //        {u(tref)} -> T &; // not virtualizable
 //        {get_fn<T>()()} -> T &; // not virtualizable
 
+        {foo(t)} -> T &;
         {foo(tref)} -> T &;
+        {foo(t_rvalue_ref)} -> T &;
         {t()} -> T &;
         {t.foo()} -> T &;
         {tref()} -> T &;
