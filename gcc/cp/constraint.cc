@@ -2820,8 +2820,6 @@ struct trees_array
     int size;
 };
 
-// TODO: Use iterative_hash_expr() for all the expr comparisons below.
-
 void
 record_unvirtualized_constraint (tree constraint, trees_array& unvirtualized_constraints)
 {
@@ -3669,7 +3667,7 @@ bool
 virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
 {
   int special_functions = 0;
-  // TODO: Do this properly!
+  // TODO: Do this properly, using iterative_hash_expr() and a hash map/table.
   trees_array unvirtualized_constraints = {{NULL_TREE}, 0};
   trees_array virtualized_exprs = {{NULL_TREE}, 0};
   if (virtualize_constraint_impl
