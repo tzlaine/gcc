@@ -2761,7 +2761,7 @@ dump_implicit_conversion_operator (tree return_type, tree struct_, bool noexcept
 }
 
 void
-dump_constructor (tree struct_, special_function_kind sfk)
+dump_constructor (tree struct_, special_function_kind sfk, bool noexcept_)
 {
   cxx_pretty_printer pp;
   pp.type_id(struct_);
@@ -2779,12 +2779,15 @@ dump_constructor (tree struct_, special_function_kind sfk)
       pp.type_id(struct_);
       pp_string (&pp, "&&");
     }
-  pp_string (&pp, ");\n");
+  pp_string (&pp, ")");
+  if (noexcept_)
+    pp_string (&pp, " noexcept");
+  pp_string (&pp, ";\n");
   fprintf(virtualize_dump_file, pp_formatted_text (&pp));
 }
 
 void
-dump_assignment_operator (tree struct_, special_function_kind sfk)
+dump_assignment_operator (tree struct_, special_function_kind sfk, bool noexcept_)
 {
   cxx_pretty_printer pp;
   pp.type_id(struct_);
@@ -2804,7 +2807,10 @@ dump_assignment_operator (tree struct_, special_function_kind sfk)
       pp.type_id(struct_);
       pp_string (&pp, "&&");
     }
-  pp_string (&pp, ");\n");
+  pp_string (&pp, ")");
+  if (noexcept_)
+    pp_string (&pp, " noexcept");
+  pp_string (&pp, ";\n");
   fprintf(virtualize_dump_file, pp_formatted_text (&pp));
 }
 
@@ -2815,7 +2821,7 @@ dump_destructor (tree struct_)
   pp.type_id(struct_);
   pp_string (&pp, "::~");
   pp.type_id(struct_);
-  pp_string (&pp, " ();\n");
+  pp_string (&pp, " () noexcept;\n");
   fprintf(virtualize_dump_file, pp_formatted_text (&pp));
 }
 
@@ -2959,7 +2965,8 @@ virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
           else
           {
             special_functions |= 1 << sfk_constructor;
-            dump_constructor (dynamic_concept, sfk_constructor);
+            bool noexcept_ = record_virtualized_constraint (expr, unvirtualized_constraints);
+            dump_constructor (dynamic_concept, sfk_constructor, noexcept_);
             handled = true;
           }
         }
@@ -3743,19 +3750,19 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
       if (!(special_functions & (1 << sfk_constructor)) &&
           !(special_functions & (1 << sfk_copy_constructor)) &&
           !(special_functions & (1 << sfk_move_constructor)))
-        dump_constructor (dynamic_concept, sfk_constructor);
+        dump_constructor (dynamic_concept, sfk_constructor, true);
 
       /* Copy ctor. */
       if (!(special_functions & (1 << sfk_copy_constructor)) &&
           !(special_functions & (1 << sfk_move_constructor)) &&
           !(special_functions & (1 << sfk_move_assignment)))
-        dump_constructor (dynamic_concept, sfk_copy_constructor);
+        dump_constructor (dynamic_concept, sfk_copy_constructor, false);
 
       /* Copy assign. */
       if (!(special_functions & (1 << sfk_copy_assignment)) &&
           !(special_functions & (1 << sfk_move_assignment)) &&
           !(special_functions & (1 << sfk_move_constructor)))
-        dump_assignment_operator (dynamic_concept, sfk_copy_assignment);
+        dump_assignment_operator (dynamic_concept, sfk_copy_assignment, false);
 
       /* Move ctor and assign. */
       if (!(special_functions & (1 << sfk_move_constructor)) &&
@@ -3764,8 +3771,8 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
           !(special_functions & (1 << sfk_copy_assignment)) &&
           !(special_functions & (1 << sfk_destructor)))
         {
-          dump_constructor (dynamic_concept, sfk_move_constructor);
-          dump_assignment_operator (dynamic_concept, sfk_move_assignment);
+          dump_constructor (dynamic_concept, sfk_move_constructor, true);
+          dump_assignment_operator (dynamic_concept, sfk_move_assignment, true);
         }
 
       dump_destructor (dynamic_concept);
