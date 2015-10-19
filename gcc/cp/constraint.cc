@@ -3729,6 +3729,9 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
     && virtualize_constraint_impl
       (1, t, proto_parm, dynamic_concept, special_functions, unvirtualized_constraints, virtualized_exprs))
     {
+      // TODO: Fail if there are unhandled elements of
+      // unvirtualized_constraints remaining.
+
       /* Default ctor. */
       if (!(special_functions & (1 << sfk_constructor)) &&
           !(special_functions & (1 << sfk_copy_constructor)) &&
