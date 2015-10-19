@@ -3685,7 +3685,7 @@ virtualize_constraint_impl (int pass, tree t, tree proto_parm, tree dynamic_conc
          unvirtualized_constraints, virtualized_exprs);
 
     case EXPR_CONSTR:
-      if (pass == 1)
+      if (pass != 1)
         return true;
       return virtualize_expression_constraint
         (t, proto_parm, dynamic_concept, special_functions, unvirtualized_constraints);
@@ -3695,21 +3695,21 @@ virtualize_constraint_impl (int pass, tree t, tree proto_parm, tree dynamic_conc
       return true;
 
     case ICONV_CONSTR:
-      if (pass == 0)
+      if (pass != 2)
         return true;
       return virtualize_implicit_conversion_constraint
         (t, proto_parm, dynamic_concept, special_functions,
          unvirtualized_constraints, virtualized_exprs);
 
     case DEDUCT_CONSTR:
-      if (pass == 0)
+      if (pass != 2)
         return true;
       return virtualize_argument_deduction_constraint
         (t, proto_parm, dynamic_concept, special_functions,
          unvirtualized_constraints, virtualized_exprs);
 
     case EXCEPT_CONSTR:
-      if (pass == 1)
+      if (pass != 0)
         return true;
       return virtualize_exception_constraint
         (t, proto_parm, dynamic_concept, special_functions, unvirtualized_constraints);
@@ -3725,19 +3725,16 @@ virtualize_constraint_impl (int pass, tree t, tree proto_parm, tree dynamic_conc
 bool
 virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
 {
-  // TODO: Add a third pass; the first should grab noexcept constraints, the
-  // second expression constraints, and the third everything else.  This is
-  // required because the expression constraints might generate ctors/dtors
-  // that need to be tagged noexcept.
-
   int special_functions = 0;
   // TODO: Do this properly, using iterative_hash_expr() and a hash map/table.
   trees_array unvirtualized_constraints = {{NULL_TREE}, 0};
   trees_array virtualized_exprs = {{NULL_TREE}, 0};
   if (virtualize_constraint_impl
       (0, t, proto_parm, dynamic_concept, special_functions, unvirtualized_constraints, virtualized_exprs)
-    && virtualize_constraint_impl
-      (1, t, proto_parm, dynamic_concept, special_functions, unvirtualized_constraints, virtualized_exprs))
+      && virtualize_constraint_impl
+      (1, t, proto_parm, dynamic_concept, special_functions, unvirtualized_constraints, virtualized_exprs)
+      && virtualize_constraint_impl
+      (2, t, proto_parm, dynamic_concept, special_functions, unvirtualized_constraints, virtualized_exprs))
     {
       // TODO: Fail if there are unhandled elements of
       // unvirtualized_constraints remaining.
