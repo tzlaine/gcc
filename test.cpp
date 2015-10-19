@@ -100,7 +100,7 @@ concept bool Addable () {
         {t != t} -> bool;
         {0 != t} -> bool;
 #endif
-#if 1 // Calls to regular member functions, free functions, and call operators.
+#if 0 // Calls to regular member functions, free functions, and call operators.
 //        {u(tref)} -> T &; // not virtualizable
 //        {get_fn<T>()()} -> T &; // not virtualizable
 
@@ -112,7 +112,7 @@ concept bool Addable () {
         {tref()} -> T &;
         {tref.foo()} -> T &;
 #endif
-#if 0
+#if 1
 //        {wt[u]} -> T &;
 //        {tref[u]} -> T &;
 //        {t[u]} -> T &;
