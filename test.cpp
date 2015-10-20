@@ -120,9 +120,12 @@ concept bool Addable () {
 //        {t[u]} -> T &;
 //        {u[t]} -> T &;
 //        {tref = 1} -> T &;
+//        {tref = 1};
+
+//        {*intptr = 1}; // this is being picked up as T-using!  Fix, if tsubst all the templates doesn't.
 
         //{T()} -> T; // Should not work, and doesn't, but it crashes!
-        {1 + t};
+
 //        {~T(1.0)};
 //        {~T()};
         {T()};
