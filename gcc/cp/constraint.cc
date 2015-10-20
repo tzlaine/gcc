@@ -2829,33 +2829,22 @@ struct trees_array
     int size;
 };
 
-#define DUMP_RECORD_CALLS 0
 void
 record_unvirtualized_constraint (tree constraint, trees_array& unvirtualized_constraints)
 {
   unvirtualized_constraints.trees[unvirtualized_constraints.size++] = constraint;
-
-#if DUMP_RECORD_CALLS
-  fprintf (virtualize_dump_file, "record_unvirtualized_constraint()\n"); // TODO
-  dump_node (constraint, 0, virtualize_dump_file); // TODO
-  fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
 }
 
 bool
-record_virtualized_expr (tree /*constraint*/, tree expr, trees_array& virtualized_exprs)
+record_virtualized_expr (tree expr, trees_array& virtualized_exprs)
 {
-#if DUMP_RECORD_CALLS
-  fprintf (virtualize_dump_file, "record_virtualized_expr()\n"); // TODO
-  dump_node (expr, 0, virtualize_dump_file); // TODO
-  fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
-
   for (int i = 0; i < virtualized_exprs.size; ++i)
     {
       if (cp_tree_equal (virtualized_exprs.trees[i], expr))
         {
-          // TODO: Diagnose duplicate conversion/deduction result type
+          error_at (EXPR_LOC_OR_LOC (expr, input_location),
+                    "more than one constraint defines a type for the expression %qE",
+                    expr);
           return false;
         }
     }
@@ -2867,12 +2856,6 @@ record_virtualized_expr (tree /*constraint*/, tree expr, trees_array& virtualize
 bool
 record_virtualized_constraint (tree expr, trees_array& unvirtualized_constraints)
 {
-#if DUMP_RECORD_CALLS
-  fprintf (virtualize_dump_file, "record_virtualized_constraint()\n"); // TODO
-  dump_node (expr, 0, virtualize_dump_file); // TODO
-  fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
-
   bool noexcept_ = false;
   for (int i = 0; i < unvirtualized_constraints.size;)
     {
@@ -2882,11 +2865,6 @@ record_virtualized_constraint (tree expr, trees_array& unvirtualized_constraints
         constraint_expr = EXCEPT_CONSTR_EXPR (unvirtualized_constraints.trees[i]);
       else
         constraint_expr = EXPR_CONSTR_EXPR (unvirtualized_constraints.trees[i]);
-
-#if DUMP_RECORD_CALLS
-      fprintf (virtualize_dump_file, "comparing to:\n"); // TODO
-      dump_node (constraint_expr, 0, virtualize_dump_file); // TODO
-#endif
 
       if (cp_tree_equal (constraint_expr, expr))
         {
@@ -2899,19 +2877,10 @@ record_virtualized_constraint (tree expr, trees_array& unvirtualized_constraints
               unvirtualized_constraints.trees[j] = unvirtualized_constraints.trees[j + 1];
             }
           --unvirtualized_constraints.size;
-#if DUMP_RECORD_CALLS
-          fprintf (virtualize_dump_file, "MATCH at %d\n", i); // TODO
-          fprintf (virtualize_dump_file, "Removed at %d\n", i); // TODO
         }
       else
         ++i;
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#else
-        }
-#endif
     }
-
-  fprintf (virtualize_dump_file, "========================================\n"); // TODO
 
   return noexcept_;
 }
@@ -3088,7 +3057,9 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   /* Explicitly disallow references to non-function members in expr. */
   if (TREE_CODE (expr) == COMPONENT_REF)
     {
-      fprintf (virtualize_dump_file, "Virtualization fails! Requirements on the existence of non-function members not supported.\n"); // TODO
+      error_at (EXPR_LOC_OR_LOC (expr, input_location),
+                "cannot virtualize a function from non-function member %qE",
+                expr);
       return false;
     }
 
@@ -3099,7 +3070,10 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          error_at (EXPR_LOC_OR_LOC (expr, input_location),
+                    "cannot virtualize %qE, because operand %qE is not a "
+                    "(possibly-cv-qualified) %qT, or a reference or pointer to %qT",
+                    expr, operand, TREE_TYPE (proto_parm), TREE_TYPE (proto_parm));
           return false;
         }
 

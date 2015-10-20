@@ -113,6 +113,11 @@ concept bool Addable () {
         {t.foo()} -> T &;
         {tref()} -> T &;
         {tref.foo()} -> T &;
+
+        {tptr->foo()} -> int; // TODO
+        {(*tptr).foo()} -> int; // TODO
+        {t->foo()} -> int; // TODO
+
 #endif
 #if 1
 //        {wt[u]} -> T &;
@@ -125,7 +130,6 @@ concept bool Addable () {
 //        {*intptr = 1}; // this is being picked up as T-using!  Fix, if tsubst all the templates doesn't.
 
         //{T()} -> T; // Should not work, and doesn't, but it crashes!
-
 //        {~T(1.0)};
 //        {~T()};
         {T()};
@@ -139,6 +143,17 @@ concept bool Addable () {
 //        {foo(0)};
 
 //        {get_fn<T>()};
+#endif
+#if 1 // Diagnostics
+#if 0
+        {&id<T>()} -> T &;
+        {t.foo} -> T &; // does not indicate a good location
+#endif
+
+#if 0 // Must be paired to produce diagnostic (does not indicate a good location)
+        {t.foo()} -> T &;
+        {t.foo()} -> T &;
+#endif
 #endif
     };
 }
