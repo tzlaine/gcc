@@ -3769,8 +3769,17 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
       && virtualize_constraint_impl
       (2, t, proto_parm, dynamic_concept, special_functions, unvirtualized_constraints, virtualized_exprs))
     {
-      // TODO: Fail if there are unhandled elements of
-      // unvirtualized_constraints remaining.
+      for (int i = 0; i < unvirtualized_constraints.size; ++i)
+      {
+          tree constraint = unvirtualized_constraints.trees[i];
+          if (TREE_CODE (constraint) == EXPR_CONSTR)
+            {
+              // TODO: Diagnose.
+              fprintf (virtualize_dump_file, "Virtualization fails! Unhandled expression constraint with no conversion:\n"); // TODO
+              dump_node (EXPR_CONSTR_EXPR (constraint), 0, virtualize_dump_file);
+              return false;
+            }
+      }
 
       /* Default ctor. */
       if (!(special_functions & (1 << sfk_constructor)) &&

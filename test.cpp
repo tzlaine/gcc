@@ -122,7 +122,7 @@ concept bool Addable () {
 //        {tref = 1} -> T &;
 
         //{T()} -> T; // Should not work, and doesn't, but it crashes!
-
+        {1 + t};
 //        {~T(1.0)};
 //        {~T()};
         {T()};
