@@ -2793,9 +2793,7 @@ dump_assignment_operator (tree struct_, special_function_kind sfk, bool noexcept
   pp.type_id(struct_);
   pp_string (&pp, "& ");
   pp.type_id(struct_);
-  pp_string (&pp, "::");
-  pp.type_id(struct_);
-  pp_string (&pp, " (");
+  pp_string (&pp, "::operator= (");
   if (sfk == sfk_copy_assignment)
     {
       pp_string (&pp, "const ");
@@ -2892,6 +2890,30 @@ record_virtualized_constraint (tree expr, trees_array& unvirtualized_constraints
   return noexcept_;
 }
 
+int
+special_function_arg_kind (tree arg, tree proto_parm)
+{
+  if (is_prototype_parm_ref_p (arg, proto_parm))
+    {
+      tree ref = arg;
+      if (TREE_CODE (ref) == INDIRECT_REF)
+        ref = TREE_OPERAND (ref, 0);
+
+      if (TREE_TYPE (ref)
+          && type_is_rvalue_ref (TREE_TYPE (ref))
+          && !VAR_P (ref)
+          && TREE_CODE (ref) != COMPONENT_REF
+          /* Functions are always lvalues.  */
+          && TREE_CODE (TREE_TYPE (TREE_TYPE (ref))) != FUNCTION_TYPE)
+        return 2; /* move */
+      else
+        return 1; /* copy */
+    }
+
+  return 0; /* something else */
+}
+
+
 bool virtualize_constraint_impl (int pass, tree t, tree proto_parm,
                                  tree dynamic_concept, int& special_functions,
                                  trees_array& unvirtualized_constraints, trees_array& virtualized_expr);
@@ -2958,8 +2980,21 @@ virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
         {
           if (args)
           {
-            special_functions |= 1 << sfk_constructor;
-            /* Non-default ctors are not virtualized. */
+            bool noexcept_ = record_virtualized_constraint (expr, unvirtualized_constraints);
+            int arg_kind = special_function_arg_kind (TREE_VALUE (args), proto_parm);
+            if (arg_kind && !TREE_CHAIN (args))
+              {
+                special_function_kind ctor_kind =
+                  arg_kind == 1 ? sfk_copy_constructor : sfk_move_constructor;
+                special_functions |= 1 << ctor_kind;
+                dump_constructor (dynamic_concept, ctor_kind, noexcept_);
+              }
+            else
+              {
+                /* Non-default, non-copy, and non-move ctors are not
+                   virtualized. */
+                special_functions |= 1 << sfk_constructor;
+              }
             handled = true;
           }
           else
@@ -3277,24 +3312,15 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
       switch (TREE_CODE (op))
       {
       case NOP_EXPR:
-        dump_member_operator_overload (return_type, dynamic_concept, "=", rhs_type, lhs, noexcept_);
-        if (is_prototype_parm_ref_p (rhs, proto_parm))
-          {
-            tree ref = rhs;
-            if (TREE_CODE (ref) == INDIRECT_REF)
-              ref = TREE_OPERAND (ref, 0);
-
-            if (TREE_TYPE (ref)
-                && type_is_rvalue_ref (TREE_TYPE (ref))
-                && !VAR_P (ref)
-                && TREE_CODE (ref) != COMPONENT_REF
-                /* Functions are always lvalues.  */
-                && TREE_CODE (TREE_TYPE (TREE_TYPE (ref))) != FUNCTION_TYPE)
-              special_functions |= 1 << sfk_move_assignment;
-            else
-              special_functions |= 1 << sfk_copy_assignment;
-          }
-        return true;
+        {
+          dump_member_operator_overload (return_type, dynamic_concept, "=", rhs_type, lhs, noexcept_);
+          int special_function = special_function_arg_kind(rhs, proto_parm);
+          if (special_function == 1)
+            special_functions |= 1 << sfk_copy_assignment;
+          if (special_function == 2)
+            special_functions |= 1 << sfk_move_assignment;
+          return true;
+        }
       case PLUS_EXPR:
         dump_member_operator_overload (return_type, dynamic_concept, "+=", rhs_type, lhs, noexcept_);
         return true;

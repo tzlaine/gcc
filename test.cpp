@@ -123,10 +123,14 @@ concept bool Addable () {
 
         //{T()} -> T; // Should not work, and doesn't, but it crashes!
 
-        {~T(1.0)};
-        {~T()};
-//        {T()};
+//        {~T(1.0)};
+//        {~T()};
+        {T()};
 //        {T(0.0, 1)};
+//        {T(tref, 1)};
+//        {T(1)};
+//        {T(tref)};
+//        {T(t_rvalue_ref)};
 //        {U()};
 //        {wrapper<T>()};
 //        {foo(0)};
