@@ -2846,13 +2846,13 @@ record_unvirtualized_constraint (tree constraint, trees_array& unvirtualized_con
 }
 
 bool
-record_virtualized_expr (tree expr, trees_array& virtualized_exprs)
+record_virtualized_expr (tree t, tree expr, trees_array& virtualized_exprs)
 {
   for (int i = 0; i < virtualized_exprs.size; ++i)
     {
       if (cp_tree_equal (virtualized_exprs.trees[i], expr))
         {
-          error_at (EXPR_LOC_OR_LOC (expr, input_location),
+          error_at (EXPR_LOC_OR_LOC (t, input_location),
                     "more than one constraint defines a type for the expression %qE",
                     expr);
           return false;
@@ -3039,7 +3039,7 @@ virtualize_implicit_conversion_return_type (tree type, tree dynamic_concept)
 }
 
 bool
-virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
+virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_type,
                                                 tree proto_parm, bool expr_uses_prototype_parm,
                                                 tree dynamic_concept, int& special_functions,
                                                 bool noexcept_)
@@ -3067,7 +3067,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
   /* Explicitly disallow references to non-function members in expr. */
   if (TREE_CODE (expr) == COMPONENT_REF)
     {
-      error_at (EXPR_LOC_OR_LOC (expr, input_location),
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
                 "cannot virtualize a function from non-function member %qE",
                 expr);
       return false;
@@ -3080,7 +3080,7 @@ virtualize_implicit_conversion_constraint_impl (tree expr, tree return_type,
 
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          error_at (EXPR_LOC_OR_LOC (expr, input_location),
+          error_at (EXPR_LOC_OR_LOC (t, input_location),
                     "cannot virtualize %qE, because operand %qE is not a "
                     "(possibly-cv-qualified) %qT, or a reference or pointer to %qT",
                     expr, operand, TREE_TYPE (proto_parm), TREE_TYPE (proto_parm));
@@ -3641,7 +3641,7 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
   bool noexcept_ = record_virtualized_constraint (expr, unvirtualized_constraints);
 
   if (!virtualize_implicit_conversion_constraint_impl
-      (expr, type, proto_parm,
+      (t, expr, type, proto_parm,
        expr_uses_prototype_parm,
        dynamic_concept, special_functions,
        noexcept_))

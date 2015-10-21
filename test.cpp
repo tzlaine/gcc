@@ -147,10 +147,10 @@ concept bool Addable () {
 #if 1 // Diagnostics
 #if 0
         {&id<T>()} -> T &;
-        {t.foo} -> T &; // does not indicate a good location
+        {t.foo} -> T &;
 #endif
 
-#if 0 // Must be paired to produce diagnostic (does not indicate a good location)
+#if 0
         {t.foo()} -> T &;
         {t.foo()} -> T &;
 #endif
