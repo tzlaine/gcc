@@ -530,7 +530,9 @@ xform_logical (tree t, tree_code c)
 inline tree
 xform_simple_requirement (tree t)
 {
-  return build_nt (EXPR_CONSTR, TREE_OPERAND (t, 0));
+  tree constr = build_nt (EXPR_CONSTR, TREE_OPERAND (t, 0));
+  SET_EXPR_LOCATION (constr, EXPR_LOC_OR_LOC(t, input_location));
+  return constr;
 }
 
 /* A type requirement T introduce a type constraint for its type.  */
@@ -554,6 +556,7 @@ xform_compound_requirement (tree t)
 {
   tree expr = TREE_OPERAND (t, 0);
   tree constr = build_nt (EXPR_CONSTR, TREE_OPERAND (t, 0));
+  SET_EXPR_LOCATION (constr, EXPR_LOC_OR_LOC(t, input_location));
 
   /* If a type is given, append an implicit conversion or
      argument deduction constraint.  */
@@ -566,6 +569,7 @@ xform_compound_requirement (tree t)
         type_constr = build_nt (DEDUCT_CONSTR, expr, type, placeholder);
       else
         type_constr = build_nt (ICONV_CONSTR, expr, type);
+      SET_EXPR_LOCATION (type_constr, EXPR_LOC_OR_LOC(t, input_location));
       constr = conjoin_constraints (constr, type_constr);
     }
 
@@ -2112,6 +2116,7 @@ finish_requires_expr (tree parms, tree reqs)
 
   /* Build the node. */
   tree r = build_min (REQUIRES_EXPR, boolean_type_node, parms, reqs);
+  SET_EXPR_LOCATION (r, input_location);
   TREE_SIDE_EFFECTS (r) = false;
   TREE_CONSTANT (r) = true;
   return r;
@@ -2121,14 +2126,18 @@ finish_requires_expr (tree parms, tree reqs)
 tree
 finish_simple_requirement (tree expr)
 {
-  return build_nt (SIMPLE_REQ, expr);
+  tree req = build_nt (SIMPLE_REQ, expr);
+  SET_EXPR_LOCATION (req, input_location);
+  return req;
 }
 
 /* Construct a requirement for the validity of TYPE. */
 tree
 finish_type_requirement (tree type)
 {
-  return build_nt (TYPE_REQ, type);
+  tree req = build_nt (TYPE_REQ, type);
+  SET_EXPR_LOCATION (req, input_location);
+  return req;
 }
 
 /* Construct a requirement for the validity of EXPR, along with
@@ -2141,6 +2150,7 @@ finish_compound_requirement (tree expr, tree type, bool noexcept_p)
 {
   tree req = build_nt (COMPOUND_REQ, expr, type);
   COMPOUND_REQ_NOEXCEPT_P (req) = noexcept_p;
+  SET_EXPR_LOCATION (req, input_location);
   return req;
 }
 
