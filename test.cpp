@@ -114,9 +114,9 @@ concept bool Addable () {
         {tref()} -> T &;
         {tref.foo()} -> T &;
 
-        {tptr->foo()} -> int; // TODO
-        {(*tptr).foo()} -> int; // TODO
-        {t->foo()} -> int; // TODO
+//        {tptr->foo()} -> int; // TODO
+//        {(*tptr).foo()} -> int; // TODO
+//        {t->foo()} -> int; // TODO
 
 #endif
 #if 1
@@ -144,7 +144,7 @@ concept bool Addable () {
 
 //        {get_fn<T>()};
 #endif
-#if 1 // Diagnostics
+#if 0 // Diagnostics
 #if 0
         {&id<T>()} -> T &;
         {t.foo} -> T &;

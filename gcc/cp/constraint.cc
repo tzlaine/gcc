@@ -2918,6 +2918,31 @@ special_function_arg_kind (tree arg, tree proto_parm)
   return 0; /* something else */
 }
 
+void
+diagnose_virtualization_loc ()
+{
+  inform (input_location, "virtualizing this concept");
+}
+
+void
+diagnose_unvirtualizable_parm (tree t, tree expr, tree operand, tree proto_parm)
+{
+  error_at (EXPR_LOC_OR_LOC (t, input_location),
+            "cannot virtualize %qE, because operand %qE is not a "
+            "(possibly cv-qualified) %qT, or a reference or pointer to %qT",
+            expr, operand, TREE_TYPE (proto_parm), TREE_TYPE (proto_parm));
+  diagnose_virtualization_loc ();
+}
+
+void
+diagnose_unvirtualizable_expr (tree t, tree expr, tree operand)
+{
+  error_at (EXPR_LOC_OR_LOC (t, input_location),
+            "cannot virtualize %qE, because operand %qE contains a subexpression",
+            expr, operand);
+  diagnose_virtualization_loc ();
+}
+
 
 bool virtualize_constraint_impl (int pass, tree t, tree proto_parm,
                                  tree dynamic_concept, int& special_functions,
@@ -3070,6 +3095,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       error_at (EXPR_LOC_OR_LOC (t, input_location),
                 "cannot virtualize a function from non-function member %qE",
                 expr);
+      diagnose_virtualization_loc ();
       return false;
     }
 
@@ -3080,10 +3106,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          error_at (EXPR_LOC_OR_LOC (t, input_location),
-                    "cannot virtualize %qE, because operand %qE is not a "
-                    "(possibly-cv-qualified) %qT, or a reference or pointer to %qT",
-                    expr, operand, TREE_TYPE (proto_parm), TREE_TYPE (proto_parm));
+          diagnose_unvirtualizable_parm (t, expr, operand, proto_parm);
           return false;
         }
 
@@ -3097,7 +3120,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (non_ref_expr_p (operand))
         {
-          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
+          diagnose_unvirtualizable_expr (t, expr, operand);
           return false;
         }
 
@@ -3115,7 +3138,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
           if (!is_prototype_parm_ref_p (operand, proto_parm))
             {
-              fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+              diagnose_unvirtualizable_parm (t, expr, operand, proto_parm);
               return false;
             }
 
@@ -3147,7 +3170,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree operand = TREE_OPERAND (expr, 0);
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          diagnose_unvirtualizable_parm (t, expr, operand, proto_parm);
           return false;
         }
       dump_member_operator_overload (return_type, dynamic_concept, "++", operand, noexcept_);
@@ -3159,7 +3182,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree operand = TREE_OPERAND (expr, 0);
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          diagnose_unvirtualizable_parm (t, expr, operand, proto_parm);
           return false;
         }
       dump_member_operator_overload (return_type, dynamic_concept, "++", integer_type_node, operand, noexcept_);
@@ -3171,7 +3194,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree operand = TREE_OPERAND (expr, 0);
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          diagnose_unvirtualizable_parm (t, expr, operand, proto_parm);
           return false;
         }
       dump_member_operator_overload (return_type, dynamic_concept, "--", operand, noexcept_);
@@ -3183,7 +3206,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree operand = TREE_OPERAND (expr, 0);
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          diagnose_unvirtualizable_parm (t, expr, operand, proto_parm);
           return false;
         }
       dump_member_operator_overload (return_type, dynamic_concept, "--", integer_type_node, operand, noexcept_);
@@ -3196,7 +3219,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          diagnose_unvirtualizable_parm (t, expr, operand, proto_parm);
           return false;
         }
 
@@ -3219,8 +3242,10 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
   /* Pointer-to-member operator (->*). */
   else if (TREE_CODE (expr) == MEMBER_REF)
     {
-      // TODO: Diagnose.
-      fprintf (virtualize_dump_file, "Virtualization fails! Pointer-to-member not supported.\n"); // TODO
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "cannot virtualize a function from pointer-to-member %qE",
+                expr);
+      diagnose_virtualization_loc ();
       return false;
     }
   /* Boolean-and operator (&&). */
@@ -3251,7 +3276,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree operand = TREE_OPERAND (expr, 0);
       if (!is_prototype_parm_ref_p (operand, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          diagnose_unvirtualizable_parm (t, expr, operand, proto_parm);
           return false;
         }
       dump_member_operator_overload (return_type, dynamic_concept, "!", operand, noexcept_);
@@ -3282,7 +3307,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (!is_prototype_parm_ref_p (lhs, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          diagnose_unvirtualizable_parm (t, expr, lhs, proto_parm);
           return false;
         }
 
@@ -3304,13 +3329,13 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (!is_prototype_parm_ref_p (lhs, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
+          diagnose_unvirtualizable_parm (t, expr, lhs, proto_parm);
           return false;
         }
 
       if (non_ref_expr_p (rhs))
         {
-          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
+          diagnose_unvirtualizable_expr (t, expr, rhs);
           return false;
         }
 
@@ -3371,9 +3396,15 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree lhs = TREE_OPERAND (expr, 0);
       tree rhs = TREE_OPERAND (expr, 1);
 
-      if (non_ref_expr_p (lhs) || non_ref_expr_p (rhs))
+      if (non_ref_expr_p (lhs))
         {
-          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
+          diagnose_unvirtualizable_expr (t, expr, lhs);
+          return false;
+        }
+
+      if (non_ref_expr_p (rhs))
+        {
+          diagnose_unvirtualizable_expr (t, expr, rhs);
           return false;
         }
 
@@ -3460,7 +3491,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (non_ref_expr_p (rhs))
         {
-          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
+          diagnose_unvirtualizable_expr (t, expr, rhs);
           return false;
         }
 
@@ -3519,9 +3550,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           tree arg = CALL_EXPR_ARG (expr, i);
           if (non_ref_expr_p (arg))
             {
-              fprintf (virtualize_dump_file, "call expr!\n"); // TODO
-              fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
-              dump_node (arg, 0, virtualize_dump_file); // TODO
+              diagnose_unvirtualizable_expr (t, expr, arg);
               return false;
             }
         }
@@ -3549,8 +3578,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
         case PARM_DECL:
           if (!is_prototype_parm_ref_p (fn, proto_parm))
             {
-              fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize lhs that contains more than T.\n"); // TODO
-              fprintf (virtualize_dump_file, "call expr!\n"); // TODO
+              diagnose_unvirtualizable_parm (t, expr, fn, proto_parm);
               return false;
             }
           pp.type_id (dynamic_concept);
@@ -3565,9 +3593,11 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           break;
 
         default:
-          fprintf (virtualize_dump_file, "call expr!\n"); // TODO
-          fprintf (virtualize_dump_file, "Too many operators!\n"); // TODO
-          dump_node (expr, 0, virtualize_dump_file); // TODO
+          error_at (EXPR_LOC_OR_LOC (t, input_location),
+                    "cannot virtualize %qE, because the function being called %qE "
+                    "is a subexpression",
+                    expr, fn);
+          diagnose_virtualization_loc ();
           return false;
         }
 
@@ -3596,17 +3626,23 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
     }
   else
     {
+#if 0
       fprintf (virtualize_dump_file, "unhandled expr:\n"); // TODO
       dump_node (expr, 0, virtualize_dump_file); // TODO
+#endif
 
       // TODO: Consider adding other kinds of expression, like static_cast<>()
       // (or others).
 
       /* Any other kind of expression causes virtualization to fail. */
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "cannot virtualize expression %qE",
+                expr);
+      diagnose_virtualization_loc ();
       return false;
     }
 
-  // TODO: Diagnose.
+  gcc_unreachable();
   return false;
 }
 
@@ -3625,7 +3661,6 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
   if (!type_uses_prototype_parm && !expr_uses_prototype_parm)
     {
       /* Nothing to virtualize, but that's not a problem. */
-      fprintf (virtualize_dump_file, "Not virtualized, because neither expr nor type uses T.\n"); // TODO
       return true;
     }
 
@@ -3635,6 +3670,10 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
   type = virtualize_implicit_conversion_return_type (type, dynamic_concept);
   if (!type || type == error_mark_node)
     {
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "substitution of template parameters into return type %qT failed",
+                type);
+      diagnose_virtualization_loc ();
       return false;
     }
 
@@ -3683,7 +3722,11 @@ virtualize_argument_deduction_constraint (tree t, tree, tree, int&,
   dump_node (DEDUCT_CONSTR_PLACEHOLDER (t), 0, virtualize_dump_file);
 #endif
 
-  // TODO: Diagnose.
+  sorry ("argument deduction constraints are not yet supported");
+  inform (EXPR_LOC_OR_LOC (t, input_location),
+          "this is an argument deduction constraints");
+  diagnose_virtualization_loc ();
+
   return false;
 }
 
@@ -3714,7 +3757,9 @@ virtualize_constraint_impl (int pass, tree t, tree proto_parm, tree dynamic_conc
          unvirtualized_constraints, virtualized_exprs);
 
     case DISJ_CONSTR:
-      // TODO: Diagnose.
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "disjuction constraints cannot be virtualized");
+      diagnose_virtualization_loc ();
       return false;
 
     case PRED_CONSTR:
@@ -3784,9 +3829,11 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
           tree constraint = unvirtualized_constraints.trees[i];
           if (TREE_CODE (constraint) == EXPR_CONSTR)
             {
-              // TODO: Diagnose.
-              fprintf (virtualize_dump_file, "Virtualization fails! Unhandled expression constraint with no conversion:\n"); // TODO
-              dump_node (EXPR_CONSTR_EXPR (constraint), 0, virtualize_dump_file);
+              error_at (EXPR_LOC_OR_LOC (constraint, input_location),
+                        "no return type could be deduced for this expression "
+                        "constraint; did you forget the `->` and an implicit "
+                        "conversion type or type deductin pattern?");
+              diagnose_virtualization_loc ();
               return false;
             }
       }
