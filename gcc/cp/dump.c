@@ -501,6 +501,16 @@ cp_dump_tree (void* dump_info, tree t)
 
     case SIMPLE_REQ:
       dump_child ("expr", TREE_OPERAND (t, 0));
+      if (EXPR_HAS_LOCATION (t))
+	{
+	  expanded_location xloc = expand_location (EXPR_LOCATION (t));
+	  if (xloc.file)
+	    {
+	      const char *filename = lbasename (xloc.file);
+	      fprintf (di->stream, "srcp: %s:%-6d ", filename,
+		       xloc.line);
+	    }
+	}
       break;
 
     case TYPE_REQ:
@@ -512,6 +522,16 @@ cp_dump_tree (void* dump_info, tree t)
       dump_child ("type", TREE_OPERAND (t, 1));
       if (COMPOUND_REQ_NOEXCEPT_P (t))
 	dump_string_field (di, "note", "noexcept");
+      if (EXPR_HAS_LOCATION (t))
+	{
+	  expanded_location xloc = expand_location (EXPR_LOCATION (t));
+	  if (xloc.file)
+	    {
+	      const char *filename = lbasename (xloc.file);
+	      fprintf (di->stream, "srcp: %s:%-6d ", filename,
+		       xloc.line);
+	    }
+	}
       break;
 
     case NESTED_REQ:
@@ -524,6 +544,16 @@ cp_dump_tree (void* dump_info, tree t)
 
     case EXPR_CONSTR:
       dump_child ("expr", EXPR_CONSTR_EXPR (t));
+      if (EXPR_HAS_LOCATION (t))
+	{
+	  expanded_location xloc = expand_location (EXPR_LOCATION (t));
+	  if (xloc.file)
+	    {
+	      const char *filename = lbasename (xloc.file);
+	      fprintf (di->stream, "srcp: %s:%-6d ", filename,
+		       xloc.line);
+	    }
+	}
       break;
 
     case TYPE_CONSTR:
@@ -533,16 +563,46 @@ cp_dump_tree (void* dump_info, tree t)
     case ICONV_CONSTR:
       dump_child ("expr", ICONV_CONSTR_EXPR (t));
       dump_child ("type", ICONV_CONSTR_TYPE (t));
+      if (EXPR_HAS_LOCATION (t))
+	{
+	  expanded_location xloc = expand_location (EXPR_LOCATION (t));
+	  if (xloc.file)
+	    {
+	      const char *filename = lbasename (xloc.file);
+	      fprintf (di->stream, "srcp: %s:%-6d ", filename,
+		       xloc.line);
+	    }
+	}
       break;
 
     case DEDUCT_CONSTR:
       dump_child ("expr", DEDUCT_CONSTR_EXPR (t));
       dump_child ("type", DEDUCT_CONSTR_PATTERN (t));
       dump_child ("placeholders", DEDUCT_CONSTR_PLACEHOLDER (t));
+      if (EXPR_HAS_LOCATION (t))
+	{
+	  expanded_location xloc = expand_location (EXPR_LOCATION (t));
+	  if (xloc.file)
+	    {
+	      const char *filename = lbasename (xloc.file);
+	      fprintf (di->stream, "srcp: %s:%-6d ", filename,
+		       xloc.line);
+	    }
+	}
       break;
 
     case EXCEPT_CONSTR:
       dump_child ("expr", EXCEPT_CONSTR_EXPR (t));
+      if (EXPR_HAS_LOCATION (t))
+	{
+	  expanded_location xloc = expand_location (EXPR_LOCATION (t));
+	  if (xloc.file)
+	    {
+	      const char *filename = lbasename (xloc.file);
+	      fprintf (di->stream, "srcp: %s:%-6d ", filename,
+		       xloc.line);
+	    }
+	}
       break;
 
     case PARM_CONSTR:
