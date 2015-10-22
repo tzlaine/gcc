@@ -62,15 +62,6 @@ concept bool Addable () {
 //        {get_fn<T>()};
 #endif
 #if 0 // Diagnostics
-#if 0
-        {&id<T>()} -> T &;
-        {t.foo} -> T &;
-#endif
-
-#if 0
-        {t.foo()} -> T &;
-        {t.foo()} -> T &;
-#endif
 #endif
     };
 }

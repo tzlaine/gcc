@@ -3093,7 +3093,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
   if (TREE_CODE (expr) == COMPONENT_REF)
     {
       error_at (EXPR_LOC_OR_LOC (t, input_location),
-                "cannot virtualize a function from non-function member %qE",
+                "cannot virtualize reference to non-function member in %qE",
                 expr);
       diagnose_virtualization_loc ();
       return false;
@@ -3129,6 +3129,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (pointer_deref)
         {
+          // TODO: Revisit...
           dump_implicit_conversion_operator (return_type, dynamic_concept, noexcept_);
           return true;
         }
