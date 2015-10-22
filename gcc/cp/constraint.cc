@@ -3045,6 +3045,38 @@ virtualize_parameterized_constraint (int pass, tree t, tree proto_parm,
 }
 
 bool
+destructor_call_p (tree expr, tree proto_parm)
+{
+  if (TREE_CODE (expr) == BIT_NOT_EXPR)
+    {
+      tree bit_not_operand = TREE_OPERAND (expr, 0);
+      if (TREE_CODE (bit_not_operand) == CAST_EXPR)
+        {
+          tree cast = bit_not_operand;
+          tree type = TREE_TYPE (cast);
+          tree args = TREE_OPERAND (cast, 0);
+          if (!args && same_type_p (type, TREE_TYPE (proto_parm)))
+            {
+              return true;
+            }
+        }
+    }
+  return false;
+}
+
+bool
+constructor_call_p (tree expr, tree proto_parm)
+{
+  if (TREE_CODE (expr) == CAST_EXPR)
+    {
+      tree type = TREE_TYPE (expr);
+      if (same_type_p (type, TREE_TYPE (proto_parm)))
+        return true;
+    }
+  return false;
+}
+
+bool
 virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
                                   int& special_functions, trees_array& unvirtualized_constraints)
 {
@@ -3058,64 +3090,47 @@ virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
 
   bool handled = false;
 
-  /* Handle this operator specially, as it might be a dtor. */
-  if (TREE_CODE (expr) == BIT_NOT_EXPR)
+  if (destructor_call_p (expr, proto_parm))
     {
-      tree bit_not_operand = TREE_OPERAND (expr, 0);
-      if (TREE_CODE (bit_not_operand) == CAST_EXPR)
+      handled = true;
+    }
+  else if (constructor_call_p (expr, proto_parm))
+    {
+      bool noexcept_ = record_virtualized_constraint (expr, unvirtualized_constraints);
+      tree args = TREE_OPERAND (expr, 0);
+      if (args)
         {
-          tree cast = bit_not_operand;
-          tree type = TREE_TYPE (cast);
-          tree args = TREE_OPERAND (cast, 0);
-          if (!args && same_type_p (type, TREE_TYPE (proto_parm)))
+          int arg_kind = special_function_arg_kind (TREE_VALUE (args), proto_parm);
+          if (arg_kind && !TREE_CHAIN (args))
             {
-              handled = true;
+              special_function_kind ctor_kind =
+                arg_kind == 1 ? sfk_copy_constructor : sfk_move_constructor;
+              special_functions |= 1 << ctor_kind;
+              dump_constructor (dynamic_concept, ctor_kind, noexcept_);
+            }
+          else
+            {
+              /* Non-default, non-copy, and non-move ctors are not
+                 virtualized. */
+              special_functions |= 1 << sfk_constructor;
             }
         }
-    }
-  else if (TREE_CODE (expr) == CAST_EXPR)
-    {
-      tree type = TREE_TYPE (expr);
-      tree args = TREE_OPERAND (expr, 0);
-
-      if (same_type_p (type, TREE_TYPE (proto_parm)))
+      else
         {
-          bool noexcept_ = record_virtualized_constraint (expr, unvirtualized_constraints);
-          if (args)
-          {
-            int arg_kind = special_function_arg_kind (TREE_VALUE (args), proto_parm);
-            if (arg_kind && !TREE_CHAIN (args))
-              {
-                special_function_kind ctor_kind =
-                  arg_kind == 1 ? sfk_copy_constructor : sfk_move_constructor;
-                special_functions |= 1 << ctor_kind;
-                dump_constructor (dynamic_concept, ctor_kind, noexcept_);
-              }
-            else
-              {
-                /* Non-default, non-copy, and non-move ctors are not
-                   virtualized. */
-                special_functions |= 1 << sfk_constructor;
-              }
-            handled = true;
-          }
-          else
-          {
-            special_functions |= 1 << sfk_constructor;
-            dump_constructor (dynamic_concept, sfk_constructor, noexcept_);
-            handled = true;
-          }
+          special_functions |= 1 << sfk_constructor;
+          dump_constructor (dynamic_concept, sfk_constructor, noexcept_);
         }
+      handled = true;
+    }
 #if 0 // If this is a good idea, it needs to happen for static/dynamic_cast,
       // and maybe some other kinds of expressions as well (sizeof, alignof,
       // etc.).
-      else
-        {
-          /* Not virtualized, but ignorable; treat this cast as a de facto type constraint. */
-          handled = true;
-        }
-#endif
+  else if (TREE_CODE (expr) == CAST_EXPR)
+    {
+      /* Not virtualized, but ignorable; treat this cast as a de facto type constraint. */
+      handled = true;
     }
+#endif
 
   if (!handled)
     record_unvirtualized_constraint (t, unvirtualized_constraints);
@@ -3218,22 +3233,24 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           return true;
         }
     }
+  else if (destructor_call_p (expr, proto_parm))
+    {
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "cannot virtualize a destructor with a return type");
+      diagnose_virtualization_loc ();
+      return false;
+    }
+  else if (constructor_call_p (expr, proto_parm))
+    {
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "cannot virtualize a constructor with a return type");
+      diagnose_virtualization_loc ();
+      return false;
+    }
 #if 0
   else if (TREE_CODE (expr) == CAST_EXPR)
     {
-      fprintf (virtualize_dump_file, "cast expression:\n"); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      fprintf (virtualize_dump_file, "expr:\n"); // TODO
-      tree list = TREE_OPERAND (expr, 0);
-      dump_node (expr, 0, virtualize_dump_file); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      fprintf (virtualize_dump_file, "purpose:\n"); // TODO
-      tree purpose = TREE_PURPOSE (list);
-      if (purpose)
-        dump_node (purpose, 0, virtualize_dump_file); // TODO
-      else
-        fprintf (virtualize_dump_file, "[NONE]\n"); // TODO
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
+      // TODO
     }
 #endif
   /* Pre-increment (++). */
