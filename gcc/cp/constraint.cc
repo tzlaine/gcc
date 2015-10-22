@@ -3099,7 +3099,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
   if (TREE_CODE (expr) == COMPONENT_REF)
     {
       error_at (EXPR_LOC_OR_LOC (t, input_location),
-                "cannot virtualize reference to non-function member in %qE",
+                "cannot virtualize use of non-function member in %qE",
                 expr);
       diagnose_virtualization_loc ();
       return false;
@@ -3245,11 +3245,11 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           return true;
         }
     }
-  /* Pointer-to-member operator (->*). */
-  else if (TREE_CODE (expr) == MEMBER_REF)
+  /* Pointer-to-member operators (.* ->*). */
+  else if (TREE_CODE (expr) == DOTSTAR_EXPR || TREE_CODE (expr) == MEMBER_REF)
     {
       error_at (EXPR_LOC_OR_LOC (t, input_location),
-                "cannot virtualize a function from pointer-to-member %qE",
+                "cannot virtualize use of pointer-to-member in %qE",
                 expr);
       diagnose_virtualization_loc ();
       return false;
@@ -3749,7 +3749,7 @@ virtualize_argument_deduction_constraint (tree t, tree, tree, int&,
 
   sorry ("argument deduction constraints are not yet supported");
   inform (EXPR_LOC_OR_LOC (t, input_location),
-          "this is an argument deduction constraints");
+          "this is an argument deduction constraint");
   diagnose_virtualization_loc ();
 
   return false;

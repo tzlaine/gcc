@@ -3,7 +3,7 @@
 template <typename T>
 concept bool C () {
   return requires (T t) {
-    {t.non_fn_member} -> T &; // { dg-error "cannot virtualize reference to non-function member in" }
+    {t.non_fn_member} -> T &; // { dg-error "cannot virtualize use of non-function member in" }
   };
 }
 
