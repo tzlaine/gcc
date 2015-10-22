@@ -2640,9 +2640,12 @@ FILE* virtualize_dump_file = NULL;
 
 namespace {
 
-bool non_ref_expr_p (tree t)
+bool subexpr_p (tree t)
 {
-  return EXPR_P (t) && !INDIRECT_REF_P (t);
+  if (INDIRECT_REF_P (t))
+    return TREE_CODE (TREE_TYPE (TREE_OPERAND (t, 0))) == POINTER_TYPE;
+  else
+    return EXPR_P (t);
 }
 
 // Dump this.  Instead, tsubst() all the params on the dynamic concept
@@ -2683,10 +2686,6 @@ bool is_prototype_parm_ref_p (tree t, tree proto_parm)
       && TREE_CODE (TREE_OPERAND (t, 0)) == PARM_DECL
       && TREE_CODE (TREE_TYPE (TREE_OPERAND (t, 0))) == REFERENCE_TYPE)
     t = TREE_TYPE (TREE_OPERAND (t, 0));
-#if 0
-  if (INDIRECT_REF_P (t))
-    t = TREE_OPERAND (t, 0);
-#endif
   if (TREE_CODE (t) == PARM_DECL)
     t = TREE_TYPE (t);
   t = non_reference(t);
@@ -2944,7 +2943,7 @@ void
 diagnose_unvirtualizable_expr (tree t, tree expr, tree operand)
 {
   error_at (EXPR_LOC_OR_LOC (t, input_location),
-            "cannot virtualize %qE, because operand %qE contains a subexpression",
+            "cannot virtualize %qE, because operand %qE is a subexpression",
             expr, operand);
   diagnose_virtualization_loc ();
 }
@@ -3191,7 +3190,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
     {
       tree operand = TREE_OPERAND (expr, 0);
 
-      if (non_ref_expr_p (operand))
+      if (subexpr_p (operand))
         {
           diagnose_unvirtualizable_expr (t, expr, operand);
           return false;
@@ -3406,7 +3405,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           return false;
         }
 
-      if (non_ref_expr_p (rhs))
+      if (subexpr_p (rhs))
         {
           diagnose_unvirtualizable_expr (t, expr, rhs);
           return false;
@@ -3469,13 +3468,13 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree lhs = TREE_OPERAND (expr, 0);
       tree rhs = TREE_OPERAND (expr, 1);
 
-      if (non_ref_expr_p (lhs))
+      if (subexpr_p (lhs))
         {
           diagnose_unvirtualizable_expr (t, expr, lhs);
           return false;
         }
 
-      if (non_ref_expr_p (rhs))
+      if (subexpr_p (rhs))
         {
           diagnose_unvirtualizable_expr (t, expr, rhs);
           return false;
@@ -3562,7 +3561,13 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree lhs = TREE_OPERAND (expr, 0);
       tree rhs = TREE_OPERAND (expr, 1);
 
-      if (non_ref_expr_p (rhs))
+      if (subexpr_p (lhs))
+        {
+          diagnose_unvirtualizable_expr (t, expr, lhs);
+          return false;
+        }
+
+      if (subexpr_p (rhs))
         {
           diagnose_unvirtualizable_expr (t, expr, rhs);
           return false;
@@ -3621,7 +3626,9 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       for (int i = 0; i < n_args; ++i)
         {
           tree arg = CALL_EXPR_ARG (expr, i);
-          if (non_ref_expr_p (arg))
+          fprintf (virtualize_dump_file, "arg %d:\n", i); // TODO
+          dump_node (arg, 0, virtualize_dump_file); // TODO
+          if (subexpr_p (arg))
             {
               diagnose_unvirtualizable_expr (t, expr, arg);
               return false;
@@ -3680,11 +3687,6 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           break;
 
         default:
-#if 0
-            fprintf (virtualize_dump_file, "Unhandled CALL_EXPR TREE_CODE (fn)! fn:\n"); // TODO
-            dump_node (fn, 0, virtualize_dump_file); // TODO
-#endif
-
           error_at (EXPR_LOC_OR_LOC (t, input_location),
                     "cannot virtualize %qE, because the function being called %qE "
                     "is a subexpression",

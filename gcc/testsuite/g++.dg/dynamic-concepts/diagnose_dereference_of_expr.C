@@ -3,7 +3,7 @@
 template <typename T>
 concept bool C () {
   return requires (T t) {
-      {*&t} -> T; // { dg-error "cannot virtualize.*because operand.*contains a subexpression" }
+      {*&t} -> T; // { dg-error "cannot virtualize.*because operand.*is a subexpression" }
   };
 }
 
