@@ -15414,8 +15414,6 @@ cp_parser_type_specifier (cp_parser* parser,
               if (!DECL_DECLARED_CONCEPT_P (fn))
                 continue;
 
-              printf ("Found one!\n");
-
               tree tmpl_parms = TREE_VALUE (DECL_TEMPLATE_PARMS (tmpl));
               for (tree p = tmpl_parms; p != NULL_TREE; p = TREE_CHAIN (p))
                 {
