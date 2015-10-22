@@ -3592,7 +3592,22 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           pp_identifier (&pp, IDENTIFIER_POINTER (DECL_NAME (fn)));
           break;
 
+        /* Probable free function call. */
+        case OVERLOAD:
+          pp_string (&pp, "::");
+          pp_identifier (&pp, IDENTIFIER_POINTER ( DECL_NAME (OVL_CURRENT (fn))));
+          break;
+
+        /* Probable free function call. */
+        case IDENTIFIER_NODE:
+          pp_string (&pp, "::");
+          pp_identifier (&pp, IDENTIFIER_POINTER (fn));
+          break;
+
         default:
+            fprintf (virtualize_dump_file, "Unhandled CALL_EXPR TREE_CODE (fn)! fn:\n"); // TODO
+            dump_node (fn, 0, virtualize_dump_file); // TODO
+
           error_at (EXPR_LOC_OR_LOC (t, input_location),
                     "cannot virtualize %qE, because the function being called %qE "
                     "is a subexpression",
