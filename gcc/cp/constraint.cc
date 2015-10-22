@@ -2949,6 +2949,73 @@ diagnose_unvirtualizable_expr (tree t, tree expr, tree operand)
   diagnose_virtualization_loc ();
 }
 
+void
+diagnose_member_only_op_lhs (tree t, tree expr, tree_code code, tree proto_parm)
+{
+  const char* op = NULL;
+
+  switch (code)
+    {
+    case ARRAY_REF:
+      op = "[]";
+      break;
+
+    case NOP_EXPR:
+      op = "=";
+      break;
+
+    case PLUS_EXPR:
+      op = "+=";
+      break;
+
+    case MINUS_EXPR:
+      op = "-=";
+      break;
+
+    case MULT_EXPR:
+      op = "*=";
+      break;
+
+    case TRUNC_DIV_EXPR:
+      op = "/=";
+      break;
+
+    case TRUNC_MOD_EXPR:
+      op = "%=";
+      break;
+
+    case LSHIFT_EXPR:
+      op = "<<=";
+      break;
+
+    case RSHIFT_EXPR:
+      op = ">>=";
+      break;
+
+    case BIT_IOR_EXPR:
+      op = "|=";
+      break;
+
+    case BIT_XOR_EXPR:
+      op = "^=";
+      break;
+
+    case BIT_AND_EXPR:
+      op = "&=";
+      break;
+
+    default:
+      op = "";
+      break;
+    }
+
+  error_at (EXPR_LOC_OR_LOC (t, input_location),
+            "cannot virtualize operator%s from a non-member of prototype "
+            "template parameter %qT as in %qE",
+            op, TREE_TYPE (proto_parm), expr);
+  diagnose_virtualization_loc ();
+}
+
 
 bool virtualize_constraint_impl (int pass, tree t, tree proto_parm,
                                  tree dynamic_concept, int& special_functions,
@@ -3307,13 +3374,13 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (!uses_prototype_parm_p (lhs, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize operator[] as a non-member.\n"); // TODO
+          diagnose_member_only_op_lhs (t, expr, ARRAY_REF, proto_parm);
           return false;
         }
 
       if (!is_prototype_parm_ref_p (lhs, proto_parm))
         {
-          diagnose_unvirtualizable_parm (t, expr, lhs, proto_parm);
+          diagnose_member_only_op_lhs (t, expr, ARRAY_REF, proto_parm);
           return false;
         }
 
@@ -3329,13 +3396,13 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (!uses_prototype_parm_p (lhs, proto_parm))
         {
-          fprintf (virtualize_dump_file, "Virtualization fails! Cannot virtualize MODO_EXPR as a non-member.\n"); // TODO
+          diagnose_member_only_op_lhs (t, expr, TREE_CODE (op), proto_parm);
           return false;
         }
 
       if (!is_prototype_parm_ref_p (lhs, proto_parm))
         {
-          diagnose_unvirtualizable_parm (t, expr, lhs, proto_parm);
+          diagnose_member_only_op_lhs (t, expr, TREE_CODE (op), proto_parm);
           return false;
         }
 
