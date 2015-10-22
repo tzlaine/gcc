@@ -3099,7 +3099,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       return false;
     }
 
-  /* Dereference operator (&). */
+  /* Address-of operator (&). */
   if (TREE_CODE (expr) == ADDR_EXPR)
     {
       tree operand = TREE_OPERAND (expr, 0);
@@ -3592,6 +3592,8 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           pp_identifier (&pp, IDENTIFIER_POINTER (DECL_NAME (fn)));
           break;
 
+        // TODO: Can we remove the two cases below once tsubst happens?
+
         /* Probable free function call. */
         case OVERLOAD:
           pp_string (&pp, "::");
@@ -3605,8 +3607,10 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           break;
 
         default:
+#if 0
             fprintf (virtualize_dump_file, "Unhandled CALL_EXPR TREE_CODE (fn)! fn:\n"); // TODO
             dump_node (fn, 0, virtualize_dump_file); // TODO
+#endif
 
           error_at (EXPR_LOC_OR_LOC (t, input_location),
                     "cannot virtualize %qE, because the function being called %qE "
