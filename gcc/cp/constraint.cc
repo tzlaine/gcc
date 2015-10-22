@@ -3654,8 +3654,6 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       for (int i = 0; i < n_args; ++i)
         {
           tree arg = CALL_EXPR_ARG (expr, i);
-          fprintf (virtualize_dump_file, "arg %d:\n", i); // TODO
-          dump_node (arg, 0, virtualize_dump_file); // TODO
           if (subexpr_p (arg))
             {
               diagnose_unvirtualizable_expr (t, expr, arg);
