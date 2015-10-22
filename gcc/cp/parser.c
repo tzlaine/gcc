@@ -15479,6 +15479,8 @@ cp_parser_type_specifier (cp_parser* parser,
             }
         }
 
+      cp_lexer_consume_token (parser->lexer);
+
       /* Look up the concept type-name.  */
       any_concept_identifier = make_any_concept_name(identifier);
       type_decl = cp_parser_lookup_name_simple (parser, any_concept_identifier, token->location);
@@ -15504,6 +15506,10 @@ cp_parser_type_specifier (cp_parser* parser,
           fclose (virtualize_dump_file); // TODO
 
           type = finish_struct (type, /*attributes=*/NULL_TREE);
+          cp_parser_set_decl_spec_type (decl_specs,
+                                        type,
+                                        token,
+                                        /*type_definition_p=*/true);
 
           return type;
         }
