@@ -3856,8 +3856,8 @@ virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept)
             {
               error_at (EXPR_LOC_OR_LOC (constraint, input_location),
                         "no return type could be deduced for this expression "
-                        "constraint; did you forget the `->` and an implicit "
-                        "conversion type or type deductin pattern?");
+                        "constraint; did you forget the '->' and an implicit "
+                        "conversion type or type deduction pattern?");
               diagnose_virtualization_loc ();
               return false;
             }
