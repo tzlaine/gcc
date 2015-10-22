@@ -3110,6 +3110,17 @@ virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
             }
           else
             {
+              while (args)
+                {
+                  tree arg = TREE_VALUE (args);
+                  if (subexpr_p (arg))
+                    {
+                      diagnose_unvirtualizable_expr (t, expr, arg);
+                      return false;
+                    }
+                  args = TREE_CHAIN (args);
+                }
+
               /* Non-default, non-copy, and non-move ctors are not
                  virtualized. */
               special_functions |= 1 << sfk_constructor;
