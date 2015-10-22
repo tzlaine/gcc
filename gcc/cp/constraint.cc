@@ -3392,7 +3392,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
         dump_member_operator_overload (return_type, dynamic_concept, "&=", rhs_type, lhs, noexcept_);
         return true;
       default:
-        // TODO: Diagnose.
+        gcc_unreachable();
         return false;
       }
     }
@@ -3485,8 +3485,8 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           return true;
 
         default:
-            // TODO: Diagnose.
-            return false;
+          gcc_unreachable();
+          return false;
         }
     }
   /* Binary operators < > == != <= >= */
@@ -3544,8 +3544,8 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
             dump_operator_overload (return_type, "!=", TREE_TYPE (lhs), rhs_type, noexcept_);
           return true;
         default:
-            // TODO: Diagnose.
-            return false;
+          gcc_unreachable();
+          return false;
         }
     }
   else if (TREE_CODE (expr) == CALL_EXPR)
