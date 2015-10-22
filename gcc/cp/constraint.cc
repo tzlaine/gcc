@@ -3129,7 +3129,6 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
 
       if (pointer_deref)
         {
-          // TODO: Revisit...
           dump_implicit_conversion_operator (return_type, dynamic_concept, noexcept_);
           return true;
         }
