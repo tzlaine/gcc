@@ -9,7 +9,7 @@ struct id
 template <typename T>
 concept bool C () {
     return requires (id<T> idt) {
-      {*idt} -> T; // { dg-error "cannot virtualize.*because operand.*is not a.*possibly cv-qualified.*or a reference or pointer to" }
+      {*idt} -> T; // { dg-error "cannot virtualize.*because operand.*is not a.*possibly cv-qualified.*or a reference to" }
   };
 }
 

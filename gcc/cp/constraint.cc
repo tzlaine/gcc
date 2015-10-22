@@ -2679,8 +2679,14 @@ bool uses_prototype_parm_p (tree t, tree)
 
 bool is_prototype_parm_ref_p (tree t, tree proto_parm)
 {
+  if (INDIRECT_REF_P (t)
+      && TREE_CODE (TREE_OPERAND (t, 0)) == PARM_DECL
+      && TREE_CODE (TREE_TYPE (TREE_OPERAND (t, 0))) == REFERENCE_TYPE)
+    t = TREE_TYPE (TREE_OPERAND (t, 0));
+#if 0
   if (INDIRECT_REF_P (t))
     t = TREE_OPERAND (t, 0);
+#endif
   if (TREE_CODE (t) == PARM_DECL)
     t = TREE_TYPE (t);
   t = non_reference(t);
@@ -2929,7 +2935,7 @@ diagnose_unvirtualizable_parm (tree t, tree expr, tree operand, tree proto_parm)
 {
   error_at (EXPR_LOC_OR_LOC (t, input_location),
             "cannot virtualize %qE, because operand %qE is not a "
-            "(possibly cv-qualified) %qT, or a reference or pointer to %qT",
+            "(possibly cv-qualified) %qT, or a reference to %qT",
             expr, operand, TREE_TYPE (proto_parm), TREE_TYPE (proto_parm));
   diagnose_virtualization_loc ();
 }
