@@ -15388,7 +15388,21 @@ cp_parser_type_specifier (cp_parser* parser,
       tree requires_expr = NULL_TREE;
       tree proto_parm = NULL_TREE;
 
-      if (TREE_CODE (type_decl) == OVERLOAD)
+      if (variable_concept_p (type_decl))
+        {
+          tree tmpl_parms = TREE_VALUE (DECL_TEMPLATE_PARMS (type_decl));
+          for (tree p = tmpl_parms; p != NULL_TREE; p = TREE_CHAIN (p))
+            {
+              gcc_assert (TREE_CODE (p) == TREE_VEC);
+              proto_parm = TREE_VALUE (TREE_VEC_ELT (p, 0));
+            }
+
+          if (!proto_parm)
+            return error_mark_node;
+
+          requires_expr = DECL_INITIAL (DECL_TEMPLATE_RESULT (type_decl));
+        }
+      else if (TREE_CODE (type_decl) == OVERLOAD)
         {
           tree ovl = type_decl;
           for (tree p = ovl; p != NULL_TREE; p = OVL_NEXT (p))
