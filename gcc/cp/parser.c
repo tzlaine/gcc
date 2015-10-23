@@ -15203,9 +15203,6 @@ cp_parser_explicit_specialization (cp_parser* parser)
 }
 
 extern void dump_node (const_tree t, int flags, FILE *stream);
-extern tree lift_expression (tree t);
-extern tree transform_expression (tree t);
-extern tree normalize_constraint (tree);
 extern bool virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept);
 
 extern FILE* virtualize_dump_file; // TODO
@@ -15346,7 +15343,7 @@ cp_parser_type_specifier (cp_parser* parser,
       tree type;
       tree any_concept_identifier;
 
-      /* Consume the `enum' token.  */
+      /* Consume the `any' token.  */
       cp_lexer_consume_token (parser->lexer);
 
       // TODO: Accept a template-id, not just an identifier here.
@@ -15433,49 +15430,6 @@ cp_parser_type_specifier (cp_parser* parser,
                 return error_mark_node; // TODO: Diagnose.
 
               requires_expr = TREE_OPERAND (fn_body, 0);
-
-              {
-                FILE* f1 = fopen ("tmpl.tree", "w");
-                dump_node (tmpl, int(0), f1);
-                fclose (f1);
-              }
-
-              {
-                FILE* f2 = fopen ("fn.tree", "w");
-                dump_node (fn, int(0), f2);
-                fclose (f2);
-              }
-
-              {
-                FILE* f3 = fopen ("fn_bind.tree", "w");
-                dump_node (fn_bind, int(0), f3);
-                fclose (f3);
-              }
-
-              {
-                FILE* f4 = fopen ("fn_body.tree", "w");
-                dump_node (fn_body, int(0), f4);
-                fclose (f4);
-              }
-
-              {
-                FILE* f4 = fopen ("requires.tree", "w");
-                dump_node (requires_expr, int(0), f4);
-                fclose (f4);
-              }
-
-              {
-                FILE* f1 = fopen ("lifted_requires.tree", "w");
-                dump_node (lift_expression(requires_expr), int(0), f1);
-                fclose (f1);
-              }
-
-              tree constraints = transform_expression (lift_expression (requires_expr));
-              {
-                FILE* f1 = fopen ("constraints.tree", "w");
-                dump_node (constraints, int(0), f1);
-                fclose (f1);
-              }
             }
         }
 
@@ -15497,12 +15451,8 @@ cp_parser_type_specifier (cp_parser* parser,
 
           type = begin_any_concept_type (identifier); 
 
-          tree lifted = lift_expression (requires_expr);
-          tree transformed = transform_expression (lifted);
-          tree normalized_constraints = normalize_constraint (transformed);
-
           virtualize_dump_file = fopen ("virtualize.out", "w"); // TODO
-          virtualize_constraint (normalized_constraints, proto_parm, type);
+          virtualize_constraint (requires_expr, proto_parm, type);
           fclose (virtualize_dump_file); // TODO
 
           type = finish_struct (type, /*attributes=*/NULL_TREE);
