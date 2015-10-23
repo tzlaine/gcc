@@ -2742,7 +2742,7 @@ dump_operator_overload_impl (tree return_type, tree struct_, const char* op,
 void
 dump_operator_overload (tree return_type, const char* op, tree lhs, tree rhs, bool noexcept_)
 {
-    dump_operator_overload_impl (return_type, NULL_TREE, op, lhs, rhs, 0, noexcept_);
+  dump_operator_overload_impl (return_type, NULL_TREE, op, lhs, rhs, 0, noexcept_);
 }
 
 void
@@ -3076,6 +3076,25 @@ constructor_call_p (tree expr, tree proto_parm)
   return false;
 }
 
+/* Not virtualized, but ignorable; treat these kinds of expressions as
+   de facto type constraints. */
+bool
+ignorable_expr_p (tree expr)
+{
+  return TREE_CODE (expr) == CAST_EXPR
+    || TREE_CODE (expr) == REINTERPRET_CAST_EXPR
+    || TREE_CODE (expr) == CONST_CAST_EXPR
+    || TREE_CODE (expr) == STATIC_CAST_EXPR
+    || TREE_CODE (expr) == DYNAMIC_CAST_EXPR
+    || TREE_CODE (expr) == IMPLICIT_CONV_EXPR
+    || TREE_CODE (expr) == TYPEID_EXPR
+    || TREE_CODE (expr) == ALIGNOF_EXPR
+    || TREE_CODE (expr) == NEW_EXPR
+    || TREE_CODE (expr) == VEC_NEW_EXPR
+    || TREE_CODE (expr) == DELETE_EXPR
+    || TREE_CODE (expr) == VEC_DELETE_EXPR;
+}
+
 bool
 virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
                                   int& special_functions, trees_array& unvirtualized_constraints)
@@ -3133,15 +3152,9 @@ virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
         }
       handled = true;
     }
-#if 0 // If this is a good idea, it needs to happen for static/dynamic_cast,
-      // and maybe some other kinds of expressions as well (sizeof, alignof,
-      // etc.).
-  else if (TREE_CODE (expr) == CAST_EXPR)
-    {
-      /* Not virtualized, but ignorable; treat this cast as a de facto type constraint. */
-      handled = true;
-    }
-#endif
+
+  if (ignorable_expr_p (expr))
+    handled = true;
 
   if (!handled)
     record_unvirtualized_constraint (t, unvirtualized_constraints);
@@ -3161,31 +3174,60 @@ virtualize_implicit_conversion_return_type (tree type, tree dynamic_concept)
   return type;
 }
 
+#if 0
+fprintf (virtualize_dump_file, "unhandled expr:\n"); // TODO
+dump_node (expr, 0, virtualize_dump_file); // TODO
+#endif
+
 bool
 virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_type,
                                                 tree proto_parm, bool expr_uses_prototype_parm,
                                                 tree dynamic_concept, int& special_functions,
                                                 bool noexcept_)
 {
-  if (!expr_uses_prototype_parm)
+  if (destructor_call_p (expr, proto_parm))
     {
-#if 0
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-      fprintf (virtualize_dump_file, "The return type must be implicitly convertible from this expression:\n"); // TODO
-      dump_node (expr, 0, virtualize_dump_file); // TODO
-#endif
-#if 0
-      fprintf (virtualize_dump_file, "This expression's type:\n"); // TODO
-      dump_node (TREE_TYPE (expr), 0, virtualize_dump_file); // TODO
-#endif
-#if 0
-      fprintf (virtualize_dump_file, "========================================\n"); // TODO
-#endif
-      return true;
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "cannot virtualize a destructor with a return type");
+      diagnose_virtualization_loc ();
+      return false;
+    }
+  else if (constructor_call_p (expr, proto_parm))
+    {
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "cannot virtualize a constructor with a return type");
+      diagnose_virtualization_loc ();
+      return false;
     }
 
-  // TODO: Binary operators and super-unary functions cannot have more than
-  // one param using the prototype parameter.
+  if (!expr_uses_prototype_parm)
+    {
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "cannot virtualize expression %qE, because it does "
+                "not use prototype parameter %qT; try writing this "
+                "as a constructor-call expression instead",
+                expr, TREE_TYPE (proto_parm));
+      diagnose_virtualization_loc ();
+      return false;
+    }
+
+  /* By itself in an expression constraint, this expression would be ignored.
+     In this code path, we are trying to convert it to some kind of possibly
+     cv-qualified T (where T is the prototype parameter).  This seems
+     unreasonable, so bail out here. */
+  if (ignorable_expr_p (expr))
+    {
+      error_at (EXPR_LOC_OR_LOC (t, input_location),
+                "cannot virtualize the conversion from expression %qE to "
+                "(possibly cv-qualified) prototype parameter %qT; try "
+                "writing this as a constructor-call expression instead",
+                expr, TREE_TYPE (proto_parm));
+      diagnose_virtualization_loc ();
+      return false;
+    }
+
+  // TODO: Disallow more than one parm using the prototype parameter in binary
+  // operators and superunary functions?
 
   /* Explicitly disallow references to non-function members in expr. */
   if (TREE_CODE (expr) == COMPONENT_REF)
@@ -3244,24 +3286,16 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           return true;
         }
     }
-  else if (destructor_call_p (expr, proto_parm))
-    {
-      error_at (EXPR_LOC_OR_LOC (t, input_location),
-                "cannot virtualize a destructor with a return type");
-      diagnose_virtualization_loc ();
-      return false;
-    }
-  else if (constructor_call_p (expr, proto_parm))
-    {
-      error_at (EXPR_LOC_OR_LOC (t, input_location),
-                "cannot virtualize a constructor with a return type");
-      diagnose_virtualization_loc ();
-      return false;
-    }
 #if 0
-  else if (TREE_CODE (expr) == CAST_EXPR)
+  else if (TREE_CODE (expr) == STATIC_CAST_EXPR)
     {
-      // TODO
+      // TODO: Specialize for static_cast<any C>(), and forward?
+      return true;
+    }
+  else if (TREE_CODE (expr) == DYNAMIC_CAST_EXPR)
+    {
+      // TODO: Specialize for dynamic_cast<any C>(), and forward?
+      return true;
     }
 #endif
   /* Pre-increment (++). */
@@ -3746,17 +3780,10 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
     }
   else
     {
-#if 0
-      fprintf (virtualize_dump_file, "unhandled expr:\n"); // TODO
-      dump_node (expr, 0, virtualize_dump_file); // TODO
-#endif
-
-      // TODO: Consider adding other kinds of expression, like static_cast<>()
-      // (or others).
-
       /* Any other kind of expression causes virtualization to fail. */
       error_at (EXPR_LOC_OR_LOC (t, input_location),
-                "cannot virtualize expression %qE",
+                "cannot virtualize expression %qE; that is not "
+                "a virtualizable kind of expression",
                 expr);
       diagnose_virtualization_loc ();
       return false;
