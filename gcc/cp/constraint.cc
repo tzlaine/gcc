@@ -2665,7 +2665,7 @@ begin_dynamic_concept_type (tree dynamic_concept_identifier)
 {
   tree type;
 
-  /* Create the new RECORD_TYPE for this lambda.  */
+  /* Create a new RECORD_TYPE.  */
   type = xref_tag (/*tag_code=*/record_type,
 		   dynamic_concept_identifier,
 		   /*scope=*/ts_current,
@@ -2694,7 +2694,7 @@ bool subexpr_p (tree t)
 }
 
 // Dump this.  Instead, tsubst() all the params on the dynamic concept
-// template-id into the concept.  This should only leave the prototype
+// partial-concept-id into the concept.  This should only leave the prototype
 // parameter, and therefore uses_template_parms() suffices.
 #if 0
 bool uses_prototype_parm_p (tree t, tree proto_parm);
