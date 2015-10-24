@@ -9,10 +9,10 @@ concept bool C () {
 
 class class_scope
 {
-  any C c; // { dg-error "the first use of 'any .*' must be a declaration at namespace scope|ISO C++ forbids declaration of.*with no type" }
+  any C c; // { dg-error "the first use of.*must be a declaration at namespace scope" }
 };
 
 void function_scope ()
 {
-  any C c; // { dg-error "the first use of 'any .*' must be a declaration at namespace scope|ISO C++ forbids declaration of.*with no type" }
+  any C c; // { dg-error "the first use of.*must be a declaration at namespace scope|forbids declaration of.*with no type" }
 }

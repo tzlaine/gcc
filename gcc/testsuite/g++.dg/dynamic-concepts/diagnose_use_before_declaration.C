@@ -7,9 +7,9 @@ concept bool C () {
   };
 }
 
-using type = any C<int>; // { dg-error "the first use of 'any .*' must be a declaration|ISO C++ forbids declaration of.*with no type" }
+using type = any C<int>; // { dg-error "the first use of.*must be a declaration" }
 
-int func (any C<int>) // { dg-error "the first use of 'any .*' must be a declaration|ISO C++ forbids declaration of.*with no type" }
+int func (any C<int>) // { dg-error "the first use of.*must be a declaration|ISO C\\\+\\\+ forbids declaration of.*with no type" }
 {
   return 42;
 }

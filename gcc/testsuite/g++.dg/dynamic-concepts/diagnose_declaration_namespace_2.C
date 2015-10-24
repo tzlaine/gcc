@@ -12,9 +12,9 @@ namespace one {
 }
 
 namespace two {
-  any ::one::C; // { dg-error "the first use of 'any .*' must be a declaration in the same namespace as|from definition of|declaration does not declare anything" }
+  any ::one::C; // { dg-error "the first use of.*must be a declaration in the same namespace as|from definition of|declaration does not declare anything" }
 }
 
 namespace one { namespace three {
-  any ::one::C; // { dg-error "the first use of 'any .*' must be a declaration in the same namespace as|from definition of|declaration does not declare anything" }
+  any ::one::C; // { dg-error "the first use of.*must be a declaration in the same namespace as|from definition of|declaration does not declare anything" }
 } }

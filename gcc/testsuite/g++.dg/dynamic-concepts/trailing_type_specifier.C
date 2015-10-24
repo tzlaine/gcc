@@ -12,7 +12,7 @@ any C;
 any C function_1 (any C c)
 {}
 
-auto function_2 (any C c) -> const ... -> * any C
+auto function_2 (any C c) -> const any C
 {}
 
 auto function_3 (any C c)
