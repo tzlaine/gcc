@@ -15420,6 +15420,13 @@ cp_parser_type_specifier (cp_parser* parser,
         }
 
       // TODO: Ensure that if this is a decl, it is in the same namespace as the concept.
+      if (!at_namespace_scope_p ())
+        {
+          error_at (token->location,
+                    "the first use of 'any %s' must be a declaration at namespace scope",
+                    IDENTIFIER_POINTER (identifier));
+          return error_mark_node;
+        }
 
       if (declares_class_or_enum)
         *declares_class_or_enum = 2;
