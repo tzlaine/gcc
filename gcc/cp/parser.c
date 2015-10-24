@@ -15204,10 +15204,12 @@ cp_parser_explicit_specialization (cp_parser* parser)
   --parser->num_template_parameter_lists;
 }
 
+#if 1
 extern void dump_node (const_tree t, int flags, FILE *stream);
 extern bool virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept);
 
 extern FILE* virtualize_dump_file; // TODO
+#endif
 
 /* Parse a type-specifier.
 
@@ -15368,7 +15370,7 @@ cp_parser_type_specifier (cp_parser* parser,
               token = cp_lexer_peek_token (parser->lexer);
               // TODO: Parse an identifier here, see if it's a concept-name,
               // and if so, report missing/too few/too many template parms.
-              fatal_error (token->location, "expected a concept-name or partial-concept-id");
+              error_at (token->location, "expected a concept-name or partial-concept-id");
               return error_mark_node;
             }
         }
@@ -15379,7 +15381,9 @@ cp_parser_type_specifier (cp_parser* parser,
 
       if (!DECL_DECLARED_CONCEPT_P (concept_decl))
         {
-          return error_mark_node; // TODO: Diagnose that "Foo" in "any Foo" must be a concept.
+          token = cp_lexer_peek_token (parser->lexer);
+          error_at (token->location, "expected a concept-name or partial-concept-id");
+          return error_mark_node;
         }
 
       if (TREE_CODE (concept_decl) == FUNCTION_DECL)
@@ -15394,40 +15398,60 @@ cp_parser_type_specifier (cp_parser* parser,
           requires_expr = DECL_INITIAL (concept_decl);
         }
 
-      // TODO: This looks fishy.
-      cp_lexer_consume_token (parser->lexer);
-
       /* Look up the dynamic concept type-name.  */
       tree any_concept_identifier = make_any_concept_name(identifier);
       tree dynamic_concept_decl =
         cp_parser_lookup_name_simple (parser, any_concept_identifier, token->location);
 
       if (dynamic_concept_decl && dynamic_concept_decl != error_mark_node)
-        return dynamic_concept_decl;
-
-      if (is_declaration)
         {
-          // TODO: Ensure that if this is a decl, it is in the same namespace as the concept.
-
-          if (declares_class_or_enum)
-            *declares_class_or_enum = 2;
-
-          tree type = begin_any_concept_type (identifier); 
-
-          virtualize_dump_file = fopen ("virtualize.out", "w"); // TODO
-          virtualize_constraint (requires_expr, proto_parm, type);
-          fclose (virtualize_dump_file); // TODO
-
-          type = finish_struct (type, /*attributes=*/NULL_TREE);
+#if 0
+          printf ("dynamic_concept_decl (looked up):\n");
+          dump_node (TREE_TYPE (dynamic_concept_decl), 0, stdout);
+#endif
+          tree type = TREE_TYPE (dynamic_concept_decl);
           cp_parser_set_decl_spec_type (decl_specs,
                                         type,
                                         token,
                                         /*type_definition_p=*/true);
-
           return type;
         }
-      else
-        return error_mark_node; // TODO: Diagnose that "any Foo" must be in a declaration on first use.
+
+      /* Note that auto_is_implicit_function_template_parm_p implies that we
+         are in a function parameter list. */
+      if (!is_declaration || parser->auto_is_implicit_function_template_parm_p)
+        {
+          error_at (token->location, "the first use of 'any %s' must be a declaration",
+                    IDENTIFIER_POINTER (identifier));
+          return error_mark_node;
+        }
+
+      // TODO: Ensure that if this is a decl, it is in the same namespace as the concept.
+
+      if (declares_class_or_enum)
+        *declares_class_or_enum = 2;
+
+      tree type = begin_any_concept_type (any_concept_identifier); 
+#if 1
+      virtualize_dump_file = fopen ("virtualize.out", "w"); // TODO
+#endif
+      virtualize_constraint (requires_expr, proto_parm, type);
+#if 1
+      fclose (virtualize_dump_file); // TODO
+#endif
+      type = finish_struct (type, /*attributes=*/NULL_TREE);
+
+      cp_parser_set_decl_spec_type (decl_specs,
+                                    type,
+                                    token,
+                                    /*type_definition_p=*/true);
+
+#if 0
+          printf ("dynamic_concept_decl (generated retval):\n");
+          dump_node (type, 0, stdout);
+#endif
+
+      return type;
     }
 
     case RID_CONST:
@@ -16021,18 +16045,18 @@ cp_parser_maybe_constrained_type_specifier (cp_parser *parser,
   if (!check_type_concept (conc, proto))
     return error_mark_node;
 
-  /* In a parameter-declaration-clause, constrained-type
-     specifiers result in invented template parameters.  */
-  if (parser->auto_is_implicit_function_template_parm_p)
-    {
-      tree x = build_constrained_parameter (conc, proto, args);
-      return synthesize_implicit_template_parm (parser, x);
-    }
-  else if (in_dynamic_concept_type_specifier_p)
+  if (in_dynamic_concept_type_specifier_p)
     {
       /* In a dynamic concept type-specifier, we just want the concept and
          prototype parm.  */
       return build_tree_list (conc, proto);
+    }
+  else if (parser->auto_is_implicit_function_template_parm_p)
+    {
+      /* In a parameter-declaration-clause, constrained-type
+         specifiers result in invented template parameters.  */
+      tree x = build_constrained_parameter (conc, proto, args);
+      return synthesize_implicit_template_parm (parser, x);
     }
   else
     {

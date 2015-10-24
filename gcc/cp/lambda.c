@@ -1148,24 +1148,18 @@ is_lambda_ignored_entity (tree val)
 }
 
 tree
-begin_any_concept_type (tree identifier)
+begin_any_concept_type (tree any_concept_identifier)
 {
   tree type;
 
-  {
-    /* Unique name.  This is just like an unnamed class, but we cannot use
-       make_anon_name because of certain checks against TYPE_ANONYMOUS_P.  */
-    tree name;
-    name = make_any_concept_name (identifier);
+  /* Create the new RECORD_TYPE for this lambda.  */
+  type = xref_tag (/*tag_code=*/record_type,
+		   any_concept_identifier,
+		   /*scope=*/ts_current,
+		   /*template_header_p=*/false);
 
-    /* Create the new RECORD_TYPE for this lambda.  */
-    type = xref_tag (/*tag_code=*/record_type,
-                     name,
-                     /*scope=*/ts_lambda,
-                     /*template_header_p=*/false);
-    if (type == error_mark_node)
-      return error_mark_node;
-  }
+  if (type == error_mark_node)
+    return error_mark_node;
 
   /* Clear base types.  */
   xref_basetypes (type, /*bases=*/NULL_TREE);

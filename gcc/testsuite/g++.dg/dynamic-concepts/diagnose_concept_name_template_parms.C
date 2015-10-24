@@ -7,4 +7,4 @@ concept bool C () {
   };
 }
 
-any C<> c; // { dg-fatal "expected a concept-name or partial-concept-id" }
+any C<int> c; // { dg-error "expected a concept-name or partial-concept-id|specializing member.*requires.*syntax" }

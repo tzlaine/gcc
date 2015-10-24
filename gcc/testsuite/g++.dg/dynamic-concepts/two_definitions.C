@@ -7,4 +7,6 @@ concept bool C () {
   };
 }
 
-any C<int> c; // { dg-fatal "expected a concept-name or partial-concept-id" }
+any C;
+
+any C c;
