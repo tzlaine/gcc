@@ -2088,7 +2088,7 @@ static tree cp_parser_type_name
 static tree cp_parser_type_name
   (cp_parser *);
 static tree cp_parser_nonclass_name 
-  (cp_parser* parser);
+  (cp_parser* parser, bool = false);
 static tree cp_parser_elaborated_type_specifier
   (cp_parser *, bool, bool);
 static tree cp_parser_enum_specifier
@@ -2563,7 +2563,7 @@ static bool cp_parser_skip_to_closing_square_bracket
 
 /* Concept-related syntactic transformations */
 
-static tree cp_parser_maybe_concept_name       (cp_parser *, tree);
+static tree cp_parser_maybe_concept_name       (cp_parser *, tree, bool);
 static tree cp_parser_maybe_partial_concept_id (cp_parser *, tree, tree, bool);
 
 // -------------------------------------------------------------------------- //
@@ -15340,9 +15340,6 @@ cp_parser_type_specifier (cp_parser* parser,
 
     case RID_ANY:
     {
-      tree type;
-      tree any_concept_identifier;
-
       /* Consume the `any' token.  */
       cp_lexer_consume_token (parser->lexer);
 
@@ -15358,160 +15355,55 @@ cp_parser_type_specifier (cp_parser* parser,
                                  none_type,
                                  /*is_declaration=*/false,
                                  /*in_dynamic_concept_type_specifier_p=*/true);
-#if 0
-      printf ("concept_decl:\n");
-      dump_node (concept_decl, 0, stdout);
-#endif
 
       if (TREE_CODE (concept_decl) != TREE_LIST)
         cp_parser_error (parser, "");
 
-      if (cp_parser_parse_definitely (parser))
+      if (!cp_parser_parse_definitely (parser))
         {
-          proto_parm = TREE_VALUE (concept_decl);
-          concept_decl = TREE_PURPOSE (concept_decl);
-          identifier = DECL_NAME (concept_decl);
-
-          // TODO: Diagnose if the template ID has any number of template
-          // parameters other than N-1, where N is the number of template
-          // parameters on concept C.
-#if 0
-          printf ("concept_decl:\n");
-          dump_node (concept_decl, 0, stdout);
-          printf ("proto_parm:\n");
-          dump_node (proto_parm, 0, stdout);
-          printf ("identifier:\n");
-          dump_node (identifier, 0, stdout);
-#endif
-
-          if (!DECL_DECLARED_CONCEPT_P (concept_decl))
+          cp_parser_parse_tentatively (parser);
+          concept_decl = cp_parser_nonclass_name (parser, true);
+          if (!cp_parser_parse_definitely (parser))
             {
-              return error_mark_node; // TODO: Diagnose that "Foo" in "any Foo" must be a concept.
+              token = cp_lexer_peek_token (parser->lexer);
+              // TODO: Parse an identifier here, see if it's a concept-name,
+              // and if so, report missing/too few/too many template parms.
+              fatal_error (token->location, "expected a concept-name or partial-concept-id");
+              return error_mark_node;
             }
+        }
 
-          if (TREE_CODE (concept_decl) == FUNCTION_DECL)
-            {
-              tree fn = concept_decl;
-              tree fn_bind = DECL_SAVED_TREE (fn);
-              tree fn_body = BIND_EXPR_BODY(fn_bind);
-              requires_expr = TREE_OPERAND (fn_body, 0);
-            }
-          else
-            {
-              requires_expr = DECL_INITIAL (concept_decl);
-            }
+      proto_parm = TREE_VALUE (concept_decl);
+      concept_decl = TREE_PURPOSE (concept_decl);
+      identifier = DECL_NAME (concept_decl);
+
+      if (!DECL_DECLARED_CONCEPT_P (concept_decl))
+        {
+          return error_mark_node; // TODO: Diagnose that "Foo" in "any Foo" must be a concept.
+        }
+
+      if (TREE_CODE (concept_decl) == FUNCTION_DECL)
+        {
+          tree fn = concept_decl;
+          tree fn_bind = DECL_SAVED_TREE (fn);
+          tree fn_body = BIND_EXPR_BODY(fn_bind);
+          requires_expr = TREE_OPERAND (fn_body, 0);
         }
       else
         {
-          // TODO: This needs to use cp_parser_maybe_concept_name () instead.
-          cp_token *concept_name_token = cp_lexer_peek_token (parser->lexer);
-          identifier = cp_parser_identifier (parser);
-          if (identifier == error_mark_node)
-            return error_mark_node;
-
-          /* Look up the concept type-name.  */
-          concept_decl = cp_parser_lookup_name_simple (parser, identifier, concept_name_token->location);
-
-          concept_decl = strip_using_decl (concept_decl);
-
-          bool not_a_concept = !concept_decl || concept_decl == error_mark_node;
-
-          if (!not_a_concept && !variable_concept_p (concept_decl))
-            {
-              /* A constrained type specifier can only be found in an
-                 overload set or as a reference to a template declaration.
-
-                 FIXME: This might be masking a bug.  It's possible that
-                 that the deduction below is causing template specializations
-                 to be formed with the wildcard as an argument.  */
-              if (TREE_CODE (concept_decl) != OVERLOAD
-                  && !BASELINK_P (concept_decl)
-                  && TREE_CODE (concept_decl) != TEMPLATE_DECL)
-                not_a_concept = true;
-
-              /* Try to build a call expression that evaluates the
-                 concept. This can fail if the overload set refers
-                 only to non-templates. */
-              tree placeholder = build_nt (WILDCARD_DECL);
-              tree check = build_concept_check (concept_decl, placeholder, NULL_TREE);
-              if (check == error_mark_node)
-                not_a_concept = true;
-            }
-
-          if (not_a_concept)
-            return error_mark_node; // TODO: Diagnose that "Foo" in "any Foo" must be a concept.
-
-          // TODO: Diagnose that a partial-concept-id must be used when
-          // concept C has more than one template parm.
-
-          if (variable_concept_p (concept_decl))
-            {
-              tree tmpl_parms = TREE_VALUE (DECL_TEMPLATE_PARMS (concept_decl));
-              for (tree p = tmpl_parms; p != NULL_TREE; p = TREE_CHAIN (p))
-                {
-                  gcc_assert (TREE_CODE (p) == TREE_VEC);
-                  proto_parm = TREE_VALUE (TREE_VEC_ELT (p, 0));
-                }
-
-              if (!proto_parm)
-                return error_mark_node;
-
-              requires_expr = DECL_INITIAL (DECL_TEMPLATE_RESULT (concept_decl));
-            }
-          else if (TREE_CODE (concept_decl) == OVERLOAD)
-            {
-              tree ovl = concept_decl;
-              for (tree p = ovl; p != NULL_TREE; p = OVL_NEXT (p))
-                {
-                  // Get the next template overload.
-                  tree tmpl = OVL_CURRENT (p);
-                  if (TREE_CODE (tmpl) != TEMPLATE_DECL)
-                    continue;
-
-                  // Don't try to deduce checks for non-concepts. We often
-                  // end up trying to resolve constraints in functional casts
-                  // as part of a postfix-expression. We can save time and
-                  // headaches by not instantiating those declarations.
-                  //
-                  // NOTE: This masks a potential error, caused by instantiating
-                  // non-deduced contexts using placeholder arguments.
-                  tree fn = DECL_TEMPLATE_RESULT (tmpl);
-                  if (DECL_ARGUMENTS (fn))
-                    continue;
-                  if (!DECL_DECLARED_CONCEPT_P (fn))
-                    continue;
-
-                  tree tmpl_parms = TREE_VALUE (DECL_TEMPLATE_PARMS (tmpl));
-                  for (tree p = tmpl_parms; p != NULL_TREE; p = TREE_CHAIN (p))
-                    {
-                      gcc_assert (TREE_CODE (p) == TREE_VEC);
-                      proto_parm = TREE_VALUE (TREE_VEC_ELT (p, 0));
-                    }
-
-                  if (!proto_parm)
-                    continue;
-
-                  tree fn_bind = DECL_SAVED_TREE (fn);
-                  tree fn_body = BIND_EXPR_BODY(fn_bind);
-
-                  /* If we didn't find a unique candidate, then this is not a
-                     constraint check. */
-                  if (requires_expr)
-                    return error_mark_node; // TODO: Diagnose.
-
-                  requires_expr = TREE_OPERAND (fn_body, 0);
-                }
-            }
+          requires_expr = DECL_INITIAL (concept_decl);
         }
 
+      // TODO: This looks fishy.
       cp_lexer_consume_token (parser->lexer);
 
-      /* Look up the concept type-name.  */
-      any_concept_identifier = make_any_concept_name(identifier);
-      concept_decl = cp_parser_lookup_name_simple (parser, any_concept_identifier, token->location);
+      /* Look up the dynamic concept type-name.  */
+      tree any_concept_identifier = make_any_concept_name(identifier);
+      tree dynamic_concept_decl =
+        cp_parser_lookup_name_simple (parser, any_concept_identifier, token->location);
 
-      if (concept_decl && concept_decl != error_mark_node)
-        return concept_decl;
+      if (dynamic_concept_decl && dynamic_concept_decl != error_mark_node)
+        return dynamic_concept_decl;
 
       if (is_declaration)
         {
@@ -15520,7 +15412,7 @@ cp_parser_type_specifier (cp_parser* parser,
           if (declares_class_or_enum)
             *declares_class_or_enum = 2;
 
-          type = begin_any_concept_type (identifier); 
+          tree type = begin_any_concept_type (identifier); 
 
           virtualize_dump_file = fopen ("virtualize.out", "w"); // TODO
           virtualize_constraint (requires_expr, proto_parm, type);
@@ -16163,9 +16055,11 @@ cp_parser_maybe_constrained_type_specifier (cp_parser *parser,
   - it is a variable concept taking a single type argument.  */
 
 static tree
-cp_parser_maybe_concept_name (cp_parser* parser, tree decl)
+cp_parser_maybe_concept_name (cp_parser* parser, tree decl,
+                              bool in_dynamic_concept_type_specifier_p)
 {
-  return cp_parser_maybe_constrained_type_specifier (parser, decl, NULL_TREE, false);
+  return cp_parser_maybe_constrained_type_specifier (parser, decl, NULL_TREE,
+                                                     in_dynamic_concept_type_specifier_p);
 }
 
 /* Check if DECL and ARGS form a partial-concept-id.  If so,
@@ -16198,7 +16092,7 @@ cp_parser_maybe_partial_concept_id (cp_parser *parser, tree decl, tree args,
    Returns a TYPE_DECL for the type.  */
 
 static tree
-cp_parser_nonclass_name (cp_parser* parser)
+cp_parser_nonclass_name (cp_parser* parser, bool in_dynamic_concept_type_specifier_p /* = false */)
 {
   tree type_decl;
   tree identifier;
@@ -16220,7 +16114,8 @@ cp_parser_nonclass_name (cp_parser* parser)
 	  || variable_concept_p (type_decl)))
   {
     /* Determine whether the overload refers to a concept. */
-    if (tree decl = cp_parser_maybe_concept_name (parser, type_decl))
+    if (tree decl = cp_parser_maybe_concept_name
+        (parser, type_decl, in_dynamic_concept_type_specifier_p))
       return decl;
   }
 

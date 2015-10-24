@@ -7,4 +7,4 @@ concept bool C () {
   };
 }
 
-any C c;
+any C<int> c;
