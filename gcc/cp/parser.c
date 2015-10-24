@@ -15346,14 +15346,22 @@ cp_parser_type_specifier (cp_parser* parser,
       tree requires_expr = NULL_TREE;
       tree identifier = NULL_TREE;
 
+      cp_parser_global_scope_opt (parser,
+                                  /*current_scope_valid_p=*/true);
+      cp_parser_nested_name_specifier_opt (parser,
+                                           /*typename_keyword_p=*/false,
+                                           /*check_dependency_p=*/true,
+                                           /*type_p=*/false,
+                                           /*is_declaration=*/false);
+
       cp_parser_parse_tentatively (parser);
       tree concept_decl =
-          cp_parser_template_id (parser,
-                                 /*template_keyword_p=*/false,
-                                 /*check_dependency_p=*/true,
-                                 none_type,
-                                 /*is_declaration=*/false,
-                                 /*in_dynamic_concept_type_specifier_p=*/true);
+        cp_parser_template_id (parser,
+                               /*template_keyword_p=*/false,
+                               /*check_dependency_p=*/true,
+                               none_type,
+                               /*is_declaration=*/false,
+                               /*in_dynamic_concept_type_specifier_p=*/true);
 
       if (TREE_CODE (concept_decl) != TREE_LIST)
         cp_parser_error (parser, "");
@@ -15395,8 +15403,9 @@ cp_parser_type_specifier (cp_parser* parser,
           requires_expr = DECL_INITIAL (concept_decl);
         }
 
-      /* Look up the dynamic concept type-name.  */
       tree dynamic_concept_identifier = make_dynamic_concept_name(identifier);
+
+      /* Look up the dynamic concept type-name. */
       tree dynamic_concept_decl =
         cp_parser_lookup_name_simple (parser, dynamic_concept_identifier, token->location);
 
@@ -15436,14 +15445,6 @@ cp_parser_type_specifier (cp_parser* parser,
                     IDENTIFIER_POINTER (identifier), IDENTIFIER_POINTER (identifier));
           inform (DECL_SOURCE_LOCATION (concept_decl),
                   "from definition of %qs", IDENTIFIER_POINTER (identifier));
-          return error_mark_node;
-        }
-
-      if (!at_namespace_scope_p ())
-        {
-          error_at (token->location,
-                    "the first use of 'any %s' must be a declaration at namespace scope",
-                    IDENTIFIER_POINTER (identifier));
           return error_mark_node;
         }
 
