@@ -15208,6 +15208,139 @@ cp_parser_explicit_specialization (cp_parser* parser)
 extern void dump_node (const_tree t, int flags, FILE *stream); // TODO
 #endif
 
+static tree
+cp_parser_dynamic_concept_specifier (cp_parser* parser,
+                                     cp_decl_specifier_seq *decl_specs,
+                                     bool is_declaration,
+                                     int* declares_class_or_enum,
+                                     cp_token* token)
+{
+  /* Consume the `any' token.  */
+  cp_lexer_consume_token (parser->lexer);
+
+  tree proto_parm = NULL_TREE;
+  tree requires_expr = NULL_TREE;
+  tree identifier = NULL_TREE;
+
+  cp_parser_global_scope_opt (parser,
+                              /*current_scope_valid_p=*/true);
+  cp_parser_nested_name_specifier_opt (parser,
+                                       /*typename_keyword_p=*/false,
+                                       /*check_dependency_p=*/true,
+                                       /*type_p=*/false,
+                                       /*is_declaration=*/false);
+
+  cp_parser_parse_tentatively (parser);
+  tree concept_decl =
+    cp_parser_template_id (parser,
+                           /*template_keyword_p=*/false,
+                           /*check_dependency_p=*/true,
+                           none_type,
+                           /*is_declaration=*/false,
+                           /*in_dynamic_concept_type_specifier_p=*/true);
+
+  if (TREE_CODE (concept_decl) != TREE_LIST)
+    cp_parser_error (parser, "");
+
+  if (!cp_parser_parse_definitely (parser))
+    {
+      cp_parser_parse_tentatively (parser);
+      concept_decl = cp_parser_nonclass_name (parser, true);
+      if (!cp_parser_parse_definitely (parser))
+        {
+          token = cp_lexer_peek_token (parser->lexer);
+          // TODO: Parse an identifier here, see if it's a concept-name,
+          // and if so, report missing/too few/too many template parms.
+          error_at (token->location, "expected a concept-name or partial-concept-id");
+          return error_mark_node;
+        }
+    }
+
+  proto_parm = TREE_VALUE (concept_decl);
+  concept_decl = TREE_PURPOSE (concept_decl);
+  identifier = DECL_NAME (concept_decl);
+
+  if (!DECL_DECLARED_CONCEPT_P (concept_decl))
+    {
+      token = cp_lexer_peek_token (parser->lexer);
+      error_at (token->location, "expected a concept-name or partial-concept-id");
+      return error_mark_node;
+    }
+
+  if (TREE_CODE (concept_decl) == FUNCTION_DECL)
+    {
+      tree fn = concept_decl;
+      tree fn_bind = DECL_SAVED_TREE (fn);
+      tree fn_body = BIND_EXPR_BODY(fn_bind);
+      requires_expr = TREE_OPERAND (fn_body, 0);
+    }
+  else
+    {
+      requires_expr = DECL_INITIAL (concept_decl);
+    }
+
+  tree dynamic_concept_identifier = make_dynamic_concept_name(identifier);
+
+  /* Look up the dynamic concept type-name. */
+  tree dynamic_concept_decl =
+    cp_parser_lookup_name_simple (parser, dynamic_concept_identifier, token->location);
+
+  if (dynamic_concept_decl && dynamic_concept_decl != error_mark_node)
+    {
+      tree type = TREE_TYPE (dynamic_concept_decl);
+      if (decl_specs)
+          cp_parser_set_decl_spec_type (decl_specs,
+                                        type,
+                                        token,
+                                        /*type_definition_p=*/false);
+      return type;
+    }
+
+  /* Note that auto_is_implicit_function_template_parm_p implies that we
+     are in a function parameter list. */
+  if (!is_declaration || parser->auto_is_implicit_function_template_parm_p)
+    {
+      error_at (token->location, "the first use of 'any %s' must be a declaration",
+                IDENTIFIER_POINTER (identifier));
+      return error_mark_node;
+    }
+
+  tree concept_decl_ns = decl_namespace_context (concept_decl);
+  if (current_scope() != DECL_CONTEXT (concept_decl)
+      && !at_namespace_scope_p ())
+    {
+      error_at (token->location,
+                "the first use of 'any %s' must be a declaration at namespace scope",
+                IDENTIFIER_POINTER (identifier));
+      return error_mark_node;
+    }
+
+  if (!is_associated_namespace (current_namespace, concept_decl_ns))
+    {
+      error_at (token->location,
+                "the first use of 'any %s' must be a declaration in the same namespace as %qs",
+                IDENTIFIER_POINTER (identifier), IDENTIFIER_POINTER (identifier));
+      inform (DECL_SOURCE_LOCATION (concept_decl),
+              "from definition of %qs", IDENTIFIER_POINTER (identifier));
+      return error_mark_node;
+    }
+
+  if (declares_class_or_enum)
+      *declares_class_or_enum = 2;
+
+  tree type = begin_dynamic_concept_type (dynamic_concept_identifier); 
+  virtualize_constraint (requires_expr, proto_parm, type);
+  type = finish_struct (type, /*attributes=*/NULL_TREE);
+
+  if (decl_specs)
+      cp_parser_set_decl_spec_type (decl_specs,
+                                    type,
+                                    token,
+                                    /*type_definition_p=*/true);
+
+  return type;
+}
+
 /* Parse a type-specifier.
 
    type-specifier:
@@ -15338,130 +15471,12 @@ cp_parser_type_specifier (cp_parser* parser,
       return type_spec;
 
     case RID_ANY:
-    {
-      /* Consume the `any' token.  */
-      cp_lexer_consume_token (parser->lexer);
-
-      tree proto_parm = NULL_TREE;
-      tree requires_expr = NULL_TREE;
-      tree identifier = NULL_TREE;
-
-      cp_parser_global_scope_opt (parser,
-                                  /*current_scope_valid_p=*/true);
-      cp_parser_nested_name_specifier_opt (parser,
-                                           /*typename_keyword_p=*/false,
-                                           /*check_dependency_p=*/true,
-                                           /*type_p=*/false,
-                                           /*is_declaration=*/false);
-
-      cp_parser_parse_tentatively (parser);
-      tree concept_decl =
-        cp_parser_template_id (parser,
-                               /*template_keyword_p=*/false,
-                               /*check_dependency_p=*/true,
-                               none_type,
-                               /*is_declaration=*/false,
-                               /*in_dynamic_concept_type_specifier_p=*/true);
-
-      if (TREE_CODE (concept_decl) != TREE_LIST)
-        cp_parser_error (parser, "");
-
-      if (!cp_parser_parse_definitely (parser))
-        {
-          cp_parser_parse_tentatively (parser);
-          concept_decl = cp_parser_nonclass_name (parser, true);
-          if (!cp_parser_parse_definitely (parser))
-            {
-              token = cp_lexer_peek_token (parser->lexer);
-              // TODO: Parse an identifier here, see if it's a concept-name,
-              // and if so, report missing/too few/too many template parms.
-              error_at (token->location, "expected a concept-name or partial-concept-id");
-              return error_mark_node;
-            }
-        }
-
-      proto_parm = TREE_VALUE (concept_decl);
-      concept_decl = TREE_PURPOSE (concept_decl);
-      identifier = DECL_NAME (concept_decl);
-
-      if (!DECL_DECLARED_CONCEPT_P (concept_decl))
-        {
-          token = cp_lexer_peek_token (parser->lexer);
-          error_at (token->location, "expected a concept-name or partial-concept-id");
-          return error_mark_node;
-        }
-
-      if (TREE_CODE (concept_decl) == FUNCTION_DECL)
-        {
-          tree fn = concept_decl;
-          tree fn_bind = DECL_SAVED_TREE (fn);
-          tree fn_body = BIND_EXPR_BODY(fn_bind);
-          requires_expr = TREE_OPERAND (fn_body, 0);
-        }
-      else
-        {
-          requires_expr = DECL_INITIAL (concept_decl);
-        }
-
-      tree dynamic_concept_identifier = make_dynamic_concept_name(identifier);
-
-      /* Look up the dynamic concept type-name. */
-      tree dynamic_concept_decl =
-        cp_parser_lookup_name_simple (parser, dynamic_concept_identifier, token->location);
-
-      if (dynamic_concept_decl && dynamic_concept_decl != error_mark_node)
-        {
-          tree type = TREE_TYPE (dynamic_concept_decl);
-          cp_parser_set_decl_spec_type (decl_specs,
-                                        type,
-                                        token,
-                                        /*type_definition_p=*/true);
-          return type;
-        }
-
-      /* Note that auto_is_implicit_function_template_parm_p implies that we
-         are in a function parameter list. */
-      if (!is_declaration || parser->auto_is_implicit_function_template_parm_p)
-        {
-          error_at (token->location, "the first use of 'any %s' must be a declaration",
-                    IDENTIFIER_POINTER (identifier));
-          return error_mark_node;
-        }
-
-      tree concept_decl_ns = decl_namespace_context (concept_decl);
-      if (current_scope() != DECL_CONTEXT (concept_decl)
-          && !at_namespace_scope_p ())
-        {
-          error_at (token->location,
-                    "the first use of 'any %s' must be a declaration at namespace scope",
-                    IDENTIFIER_POINTER (identifier));
-          return error_mark_node;
-        }
-
-      if (!is_associated_namespace (current_namespace, concept_decl_ns))
-        {
-          error_at (token->location,
-                    "the first use of 'any %s' must be a declaration in the same namespace as %qs",
-                    IDENTIFIER_POINTER (identifier), IDENTIFIER_POINTER (identifier));
-          inform (DECL_SOURCE_LOCATION (concept_decl),
-                  "from definition of %qs", IDENTIFIER_POINTER (identifier));
-          return error_mark_node;
-        }
-
-      if (declares_class_or_enum)
-        *declares_class_or_enum = 2;
-
-      tree type = begin_dynamic_concept_type (dynamic_concept_identifier); 
-      virtualize_constraint (requires_expr, proto_parm, type);
-      type = finish_struct (type, /*attributes=*/NULL_TREE);
-
-      cp_parser_set_decl_spec_type (decl_specs,
-                                    type,
-                                    token,
-                                    /*type_definition_p=*/true);
-
-      return type;
-    }
+      type_spec = cp_parser_dynamic_concept_specifier (parser,
+                                                       decl_specs,
+                                                       is_declaration,
+                                                       declares_class_or_enum,
+                                                       token);
+      return type_spec;
 
     case RID_CONST:
       ds = ds_const;
