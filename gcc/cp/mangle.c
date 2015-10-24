@@ -3673,6 +3673,21 @@ mangle_decl (const tree decl)
 /* Generate the mangled representation of TYPE.  */
 
 const char *
+mangle_template_arg (const tree arg)
+{
+  const char *result;
+
+  start_mangling (arg);
+  write_template_arg (arg);
+  result = finish_mangling ();
+  if (DEBUG_MANGLE)
+    fprintf (stderr, "mangle_template_arg = '%s'\n\n", result);
+  return result;
+}
+
+/* Generate the mangled representation of TYPE.  */
+
+const char *
 mangle_type_string (const tree type)
 {
   const char *result;

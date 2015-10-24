@@ -2639,11 +2639,24 @@ extern void dump_node (const_tree t, int flags, FILE *stream); // TODO
 FILE* virtualize_dump_file = NULL;
 
 tree
-make_dynamic_concept_name (tree concept_identifier)
+make_dynamic_concept_name (tree concept_identifier, tree partial_id_args)
 {
+  // TODO
   char buf[1024];
 
-  sprintf (buf, ANYCONCEPTNAME_FORMAT, IDENTIFIER_POINTER (concept_identifier));
+  int pos = sprintf (buf, ANYCONCEPTNAME_FORMAT, IDENTIFIER_POINTER (concept_identifier));
+
+  if (partial_id_args)
+    {
+      for (int i = 0; i < TREE_VEC_LENGTH (partial_id_args); ++i)
+        {
+          tree arg = TREE_VEC_ELT (partial_id_args, i);
+          const char * mangled_arg = mangle_template_arg (arg);
+          int len = sprintf (buf + pos, "_%s", mangled_arg);
+          pos += len;
+        }
+    }
+
   return get_identifier (buf);
 }
 

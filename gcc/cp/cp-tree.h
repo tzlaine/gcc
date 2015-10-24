@@ -6642,6 +6642,7 @@ extern bool maybe_remove_implicit_alias		(tree);
 extern void init_mangle				(void);
 extern void mangle_decl				(tree);
 extern const char *mangle_type_string		(tree);
+extern const char *mangle_template_arg		(const tree arg);
 extern tree mangle_typeinfo_for_type		(tree);
 extern tree mangle_typeinfo_string_for_type	(tree);
 extern tree mangle_vtbl_for_type		(tree);
@@ -6737,7 +6738,7 @@ extern int more_constrained                     (tree, tree);
 
 extern void diagnose_constraints                (location_t, tree, tree);
 
-extern tree make_dynamic_concept_name		(tree);
+extern tree make_dynamic_concept_name		(tree, tree);
 extern tree begin_dynamic_concept_type		(tree);
 extern bool virtualize_constraint		(tree t, tree proto_parm, tree dynamic_concept);
 

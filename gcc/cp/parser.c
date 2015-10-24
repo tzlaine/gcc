@@ -15221,6 +15221,7 @@ cp_parser_dynamic_concept_specifier (cp_parser* parser,
   tree proto_parm = NULL_TREE;
   tree requires_expr = NULL_TREE;
   tree identifier = NULL_TREE;
+  tree partial_id_args = NULL_TREE;
 
   cp_parser_global_scope_opt (parser,
                               /*current_scope_valid_p=*/true);
@@ -15242,7 +15243,13 @@ cp_parser_dynamic_concept_specifier (cp_parser* parser,
   if (TREE_CODE (concept_decl) != TREE_LIST)
     cp_parser_error (parser, "");
 
-  if (!cp_parser_parse_definitely (parser))
+  if (cp_parser_parse_definitely (parser))
+    {
+      partial_id_args = TREE_CHAIN (concept_decl);
+      if (partial_id_args)
+        partial_id_args = TREE_PURPOSE (partial_id_args);
+    }
+  else
     {
       cp_parser_parse_tentatively (parser);
       concept_decl = cp_parser_nonclass_name (parser, true);
@@ -15279,7 +15286,7 @@ cp_parser_dynamic_concept_specifier (cp_parser* parser,
       requires_expr = DECL_INITIAL (concept_decl);
     }
 
-  tree dynamic_concept_identifier = make_dynamic_concept_name(identifier);
+  tree dynamic_concept_identifier = make_dynamic_concept_name(identifier, partial_id_args);
 
   /* Look up the dynamic concept type-name. */
   tree dynamic_concept_decl =
@@ -16073,7 +16080,13 @@ cp_parser_maybe_constrained_type_specifier (cp_parser *parser,
     {
       /* In a dynamic concept type-specifier, we just want the concept and
          prototype parm.  */
-      return build_tree_list (conc, proto);
+      tree concept_parts = build_tree_list (conc, proto);
+      if (args)
+        {
+          tree args_list = build_tree_list (args, NULL_TREE);
+          TREE_CHAIN (concept_parts) = args_list;
+        }
+      return concept_parts;
     }
   else if (parser->auto_is_implicit_function_template_parm_p)
     {
