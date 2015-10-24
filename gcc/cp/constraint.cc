@@ -2638,6 +2638,38 @@ diagnose_constraints (location_t loc, tree t, tree args)
 extern void dump_node (const_tree t, int flags, FILE *stream); // TODO
 FILE* virtualize_dump_file = NULL;
 
+tree
+make_dynamic_concept_name (tree concept_identifier)
+{
+  char buf[1024];
+
+  sprintf (buf, ANYCONCEPTNAME_FORMAT, IDENTIFIER_POINTER (concept_identifier));
+  return get_identifier (buf);
+}
+
+tree
+begin_dynamic_concept_type (tree dynamic_concept_identifier)
+{
+  tree type;
+
+  /* Create the new RECORD_TYPE for this lambda.  */
+  type = xref_tag (/*tag_code=*/record_type,
+		   dynamic_concept_identifier,
+		   /*scope=*/ts_current,
+		   /*template_header_p=*/false);
+
+  if (type == error_mark_node)
+    return error_mark_node;
+
+  /* Clear base types.  */
+  xref_basetypes (type, /*bases=*/NULL_TREE);
+
+  /* Start the class.  */
+  type = begin_class_definition (type);
+
+  return type;
+}
+
 namespace {
 
 bool subexpr_p (tree t)
@@ -3960,6 +3992,10 @@ virtualize_constraint_impl (int pass, tree t, tree proto_parm, tree dynamic_conc
 bool
 virtualize_constraint (tree requires_expr, tree proto_parm, tree dynamic_concept)
 {
+#if 1
+  virtualize_dump_file = fopen ("virtualize.out", "w"); // TODO
+#endif
+
   tree lifted = lift_expression (requires_expr);
   tree transformed = transform_expression (lifted);
   tree t = normalize_constraint (transformed);
@@ -4020,8 +4056,14 @@ virtualize_constraint (tree requires_expr, tree proto_parm, tree dynamic_concept
 
       dump_destructor (dynamic_concept);
 
+#if 1
+      fclose (virtualize_dump_file); // TODO
+#endif
       return true;
     }
 
+#if 1
+  fclose (virtualize_dump_file); // TODO
+#endif
   return false;
 }

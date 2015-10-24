@@ -15205,10 +15205,7 @@ cp_parser_explicit_specialization (cp_parser* parser)
 }
 
 #if 1
-extern void dump_node (const_tree t, int flags, FILE *stream);
-extern bool virtualize_constraint (tree t, tree proto_parm, tree dynamic_concept);
-
-extern FILE* virtualize_dump_file; // TODO
+extern void dump_node (const_tree t, int flags, FILE *stream); // TODO
 #endif
 
 /* Parse a type-specifier.
@@ -15399,16 +15396,12 @@ cp_parser_type_specifier (cp_parser* parser,
         }
 
       /* Look up the dynamic concept type-name.  */
-      tree any_concept_identifier = make_any_concept_name(identifier);
+      tree dynamic_concept_identifier = make_dynamic_concept_name(identifier);
       tree dynamic_concept_decl =
-        cp_parser_lookup_name_simple (parser, any_concept_identifier, token->location);
+        cp_parser_lookup_name_simple (parser, dynamic_concept_identifier, token->location);
 
       if (dynamic_concept_decl && dynamic_concept_decl != error_mark_node)
         {
-#if 0
-          printf ("dynamic_concept_decl (looked up):\n");
-          dump_node (TREE_TYPE (dynamic_concept_decl), 0, stdout);
-#endif
           tree type = TREE_TYPE (dynamic_concept_decl);
           cp_parser_set_decl_spec_type (decl_specs,
                                         type,
@@ -15431,25 +15424,14 @@ cp_parser_type_specifier (cp_parser* parser,
       if (declares_class_or_enum)
         *declares_class_or_enum = 2;
 
-      tree type = begin_any_concept_type (any_concept_identifier); 
-#if 1
-      virtualize_dump_file = fopen ("virtualize.out", "w"); // TODO
-#endif
+      tree type = begin_dynamic_concept_type (dynamic_concept_identifier); 
       virtualize_constraint (requires_expr, proto_parm, type);
-#if 1
-      fclose (virtualize_dump_file); // TODO
-#endif
       type = finish_struct (type, /*attributes=*/NULL_TREE);
 
       cp_parser_set_decl_spec_type (decl_specs,
                                     type,
                                     token,
                                     /*type_definition_p=*/true);
-
-#if 0
-          printf ("dynamic_concept_decl (generated retval):\n");
-          dump_node (type, 0, stdout);
-#endif
 
       return type;
     }

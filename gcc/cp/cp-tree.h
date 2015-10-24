@@ -5632,7 +5632,6 @@ extern void finish_scope			(void);
 extern void push_switch				(tree);
 extern void pop_switch				(void);
 extern tree make_lambda_name			(void);
-extern tree make_any_concept_name		(tree);
 extern int decls_match				(tree, tree);
 extern tree duplicate_decls			(tree, tree, bool);
 extern tree declare_local_label			(tree);
@@ -6349,8 +6348,6 @@ extern tree current_nonlambda_scope		(void);
 extern void maybe_add_lambda_conv_op            (tree);
 extern bool is_lambda_ignored_entity            (tree);
 
-extern tree begin_any_concept_type		(tree);
-
 /* in tree.c */
 extern int cp_tree_operand_length		(const_tree);
 void cp_free_lang_data 				(tree t);
@@ -6739,6 +6736,10 @@ extern bool subsumes_constraints                (tree, tree);
 extern int more_constrained                     (tree, tree);
 
 extern void diagnose_constraints                (location_t, tree, tree);
+
+extern tree make_dynamic_concept_name		(tree);
+extern tree begin_dynamic_concept_type		(tree);
+extern bool virtualize_constraint		(tree t, tree proto_parm, tree dynamic_concept);
 
 /* in logic.cc */
 extern tree decompose_assumptions               (tree);

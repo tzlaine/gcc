@@ -1146,26 +1146,3 @@ is_lambda_ignored_entity (tree val)
 
   return false;
 }
-
-tree
-begin_any_concept_type (tree any_concept_identifier)
-{
-  tree type;
-
-  /* Create the new RECORD_TYPE for this lambda.  */
-  type = xref_tag (/*tag_code=*/record_type,
-		   any_concept_identifier,
-		   /*scope=*/ts_current,
-		   /*template_header_p=*/false);
-
-  if (type == error_mark_node)
-    return error_mark_node;
-
-  /* Clear base types.  */
-  xref_basetypes (type, /*bases=*/NULL_TREE);
-
-  /* Start the class.  */
-  type = begin_class_definition (type);
-
-  return type;
-}
