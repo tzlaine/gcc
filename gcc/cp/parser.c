@@ -15419,7 +15419,26 @@ cp_parser_type_specifier (cp_parser* parser,
           return error_mark_node;
         }
 
-      // TODO: Ensure that if this is a decl, it is in the same namespace as the concept.
+      tree concept_decl_ns = decl_namespace_context (concept_decl);
+      if (current_scope() != DECL_CONTEXT (concept_decl)
+          && !at_namespace_scope_p ())
+        {
+          error_at (token->location,
+                    "the first use of 'any %s' must be a declaration at namespace scope",
+                    IDENTIFIER_POINTER (identifier));
+          return error_mark_node;
+        }
+
+      if (!is_associated_namespace (current_namespace, concept_decl_ns))
+        {
+          error_at (token->location,
+                    "the first use of 'any %s' must be a declaration in the same namespace as %qs",
+                    IDENTIFIER_POINTER (identifier), IDENTIFIER_POINTER (identifier));
+          inform (DECL_SOURCE_LOCATION (concept_decl),
+                  "from definition of %qs", IDENTIFIER_POINTER (identifier));
+          return error_mark_node;
+        }
+
       if (!at_namespace_scope_p ())
         {
           error_at (token->location,
