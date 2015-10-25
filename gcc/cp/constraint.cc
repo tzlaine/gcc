@@ -2632,7 +2632,7 @@ diagnose_constraints (location_t loc, tree t, tree args)
 
 
 /*---------------------------------------------------------------------------
-                        Dynamic Constraint Code-Gen
+                              Dynamic Concepts
 ---------------------------------------------------------------------------*/
 
 extern void dump_node (const_tree t, int flags, FILE *stream); // TODO
@@ -3734,8 +3734,6 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
           pp_string (&pp, "::");
           pp_identifier (&pp, IDENTIFIER_POINTER (DECL_NAME (fn)));
           break;
-
-        // TODO: Can we remove the two cases below once tsubst happens?
 
         /* Probable free function call. */
         case OVERLOAD:
