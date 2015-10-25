@@ -15219,7 +15219,6 @@ cp_parser_dynamic_concept_specifier (cp_parser* parser,
   cp_lexer_consume_token (parser->lexer);
 
   tree proto_parm = NULL_TREE;
-  tree requires_expr = NULL_TREE;
   tree identifier = NULL_TREE;
   tree partial_id_args = NULL_TREE;
 
@@ -15274,18 +15273,6 @@ cp_parser_dynamic_concept_specifier (cp_parser* parser,
       return error_mark_node;
     }
 
-  if (TREE_CODE (concept_decl) == FUNCTION_DECL)
-    {
-      tree fn = concept_decl;
-      tree fn_bind = DECL_SAVED_TREE (fn);
-      tree fn_body = BIND_EXPR_BODY(fn_bind);
-      requires_expr = TREE_OPERAND (fn_body, 0);
-    }
-  else
-    {
-      requires_expr = DECL_INITIAL (concept_decl);
-    }
-
   tree dynamic_concept_identifier = make_dynamic_concept_name(identifier, partial_id_args);
 
   /* Look up the dynamic concept type-name. */
@@ -15330,6 +15317,34 @@ cp_parser_dynamic_concept_specifier (cp_parser* parser,
       inform (DECL_SOURCE_LOCATION (concept_decl),
               "from definition of %qs", IDENTIFIER_POINTER (identifier));
       return error_mark_node;
+    }
+
+  tree requires_expr = NULL_TREE;
+  if (TREE_CODE (concept_decl) == FUNCTION_DECL)
+    {
+      tree fn = concept_decl;
+      tree fn_bind = DECL_SAVED_TREE (fn);
+      tree fn_body = BIND_EXPR_BODY(fn_bind);
+      requires_expr = TREE_OPERAND (fn_body, 0);
+    }
+  else
+    {
+      requires_expr = DECL_INITIAL (concept_decl);
+    }
+
+  if (partial_id_args)
+    {
+      int num_args = TREE_VEC_LENGTH (partial_id_args);
+      tree tsubst_args = make_tree_vec (num_args + 1);
+      tree placeholder = build_nt (WILDCARD_DECL);
+      TREE_VEC_ELT (tsubst_args, 0) = TREE_TYPE (placeholder);
+      for (int i = 0; i < num_args; ++i)
+        {
+          TREE_VEC_ELT (tsubst_args, i + 1) = TREE_VEC_ELT (partial_id_args, i);
+        }
+      requires_expr = tsubst_requires_expr (requires_expr, tsubst_args, tf_error, concept_decl);
+      if (!requires_expr || requires_expr == error_mark_node)
+        return requires_expr;
     }
 
   if (declares_class_or_enum)

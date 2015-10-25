@@ -3,8 +3,8 @@
 template <typename T, typename U>
 concept bool C () {
   return requires (T t, U u) {
-    {u >>= t} -> int; // { dg-error "cannot virtualize operator>>= from a non-member of prototype template parameter" }
+    {u >>= t} -> int;
   };
 }
 
-any C<int> c;
+any C<int> c; // { dg-error "cannot virtualize operator>>= from a non-member of prototype template parameter" }

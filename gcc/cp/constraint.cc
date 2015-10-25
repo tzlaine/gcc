@@ -2693,37 +2693,12 @@ bool subexpr_p (tree t)
     return EXPR_P (t);
 }
 
-// Dump this.  Instead, tsubst() all the params on the dynamic concept
-// partial-concept-id into the concept.  This should only leave the prototype
-// parameter, and therefore uses_template_parms() suffices.
-#if 0
-bool uses_prototype_parm_p (tree t, tree proto_parm);
-
-tree uses_parm_callback (tree *tp, int *, void *parm)
+bool uses_prototype_parm_p (tree t)
 {
-  if (TREE_CODE (*tp) == TEMPLATE_TYPE_PARM)
-    {
-      if (*tp == TREE_TYPE ((tree)parm))
-        return (tree)parm;
-    }
-  else if (DECL_P (*tp))
-    {
-      if (uses_prototype_parm_p(TREE_TYPE (*tp), (tree)parm))
-        return (tree)parm;
-    }
-  return NULL_TREE;
-}
-
-bool uses_prototype_parm_p (tree t, tree proto_parm)
-{
-  return walk_tree (&t, uses_parm_callback, proto_parm, NULL) != NULL_TREE;
-}
-#else
-bool uses_prototype_parm_p (tree t, tree)
-{
+  /* This works because we've already substituted in all the other template
+     args. */
   return uses_template_parms(t);
 }
-#endif
 
 bool is_prototype_parm_ref_p (tree t, tree proto_parm)
 {
@@ -3146,7 +3121,7 @@ virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
 {
   tree expr = EXPR_CONSTR_EXPR (t);
 
-  if (!uses_prototype_parm_p (expr, proto_parm))
+  if (!uses_prototype_parm_p (expr))
     {
       /* Nothing to virtualize, but that's not a problem. */
       return true;
@@ -3206,23 +3181,6 @@ virtualize_expression_constraint (tree t, tree proto_parm, tree dynamic_concept,
 
   return true;
 }
-
-tree
-virtualize_implicit_conversion_return_type (tree type, tree dynamic_concept)
-{
-  if (uses_template_parms (type))
-  {
-      tree vec = make_tree_vec (1);
-      TREE_VEC_ELT (vec, 0) = dynamic_concept;
-      type = tsubst_expr (type, vec, tf_none, NULL_TREE, false);
-  }
-  return type;
-}
-
-#if 0
-fprintf (virtualize_dump_file, "unhandled expr:\n"); // TODO
-dump_node (expr, 0, virtualize_dump_file); // TODO
-#endif
 
 bool
 virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_type,
@@ -3478,7 +3436,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree lhs = TREE_OPERAND (expr, 0);
       tree rhs = TREE_OPERAND (expr, 1);
 
-      if (!uses_prototype_parm_p (lhs, proto_parm))
+      if (!uses_prototype_parm_p (lhs))
         {
           diagnose_member_only_op_lhs (t, expr, ARRAY_REF, proto_parm);
           return false;
@@ -3500,7 +3458,7 @@ virtualize_implicit_conversion_constraint_impl (tree t, tree expr, tree return_t
       tree op = TREE_OPERAND (expr, 1);
       tree rhs = TREE_OPERAND (expr, 2);
 
-      if (!uses_prototype_parm_p (lhs, proto_parm))
+      if (!uses_prototype_parm_p (lhs))
         {
           diagnose_member_only_op_lhs (t, expr, TREE_CODE (op), proto_parm);
           return false;
@@ -3847,8 +3805,8 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
   tree type = ICONV_CONSTR_TYPE (t);
   tree expr = ICONV_CONSTR_EXPR (t);
 
-  bool type_uses_prototype_parm = uses_prototype_parm_p (type, proto_parm);
-  bool expr_uses_prototype_parm = uses_prototype_parm_p (expr, proto_parm);
+  bool type_uses_prototype_parm = uses_prototype_parm_p (type);
+  bool expr_uses_prototype_parm = uses_prototype_parm_p (expr);
 
   if (!type_uses_prototype_parm && !expr_uses_prototype_parm)
     {
@@ -3858,16 +3816,6 @@ virtualize_implicit_conversion_constraint (tree t, tree proto_parm, tree dynamic
 
   if (!record_virtualized_expr (t, expr, virtualized_exprs))
     return false;
-
-  type = virtualize_implicit_conversion_return_type (type, dynamic_concept);
-  if (!type || type == error_mark_node)
-    {
-      error_at (EXPR_LOC_OR_LOC (t, input_location),
-                "substitution of template parameters into return type %qT failed",
-                type);
-      diagnose_virtualization_loc ();
-      return false;
-    }
 
   bool noexcept_ = record_virtualized_constraint (expr, unvirtualized_constraints);
 
