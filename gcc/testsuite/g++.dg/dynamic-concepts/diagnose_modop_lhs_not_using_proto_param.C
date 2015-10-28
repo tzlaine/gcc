@@ -7,4 +7,4 @@ concept bool C () {
   };
 }
 
-any C<int> c; // { dg-error "cannot virtualize operator>>= from a non-member of prototype template parameter" }
+any C<int> c; // { dg-error "cannot virtualize operator>>= from a non-member of prototype template parameter|ISO C\\\+\\\+ forbids declaration of.*with no type" }

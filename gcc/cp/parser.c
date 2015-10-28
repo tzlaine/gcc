@@ -15350,8 +15350,10 @@ cp_parser_dynamic_concept_specifier (cp_parser* parser,
   if (declares_class_or_enum)
       *declares_class_or_enum = 2;
 
-  tree type = begin_dynamic_concept_type (dynamic_concept_identifier); 
-  virtualize_constraint (requires_expr, proto_parm, type);
+  tree type = begin_dynamic_concept_type (dynamic_concept_identifier);
+  if (!virtualize_constraint (concept_decl, requires_expr, proto_parm, type))
+    return error_mark_node;
+
   type = finish_struct (type, /*attributes=*/NULL_TREE);
 
   if (decl_specs)

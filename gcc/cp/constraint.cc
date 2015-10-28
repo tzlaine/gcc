@@ -3949,7 +3949,7 @@ virtualize_constraint_impl (int pass, tree t, tree proto_parm, tree dynamic_conc
 } /* namespace */
 
 bool
-virtualize_constraint (tree requires_expr, tree proto_parm, tree dynamic_concept)
+virtualize_constraint (tree /*concept_decl*/, tree requires_expr, tree proto_parm, tree dynamic_concept)
 {
 #if 1
   virtualize_dump_file = fopen ("virtualize.out", "w"); // TODO
@@ -3984,6 +3984,12 @@ virtualize_constraint (tree requires_expr, tree proto_parm, tree dynamic_concept
             }
       }
 
+      // TODO
+      /* Generate converting ctor template that takes an object by value. */
+
+      // TODO
+      /* Generate converting ctor template that takes an object by pointer. */
+
       /* Default ctor. */
       if (!(special_functions & (1 << sfk_constructor)) &&
           !(special_functions & (1 << sfk_copy_constructor)) &&
@@ -4000,7 +4006,11 @@ virtualize_constraint (tree requires_expr, tree proto_parm, tree dynamic_concept
       if (!(special_functions & (1 << sfk_copy_assignment)) &&
           !(special_functions & (1 << sfk_move_assignment)) &&
           !(special_functions & (1 << sfk_move_constructor)))
-        dump_assignment_operator (dynamic_concept, sfk_copy_assignment, false);
+        {
+          dump_assignment_operator (dynamic_concept, sfk_copy_assignment, false);
+          // TODO
+          /* Generate converting copy assignment template. */
+        }
 
       /* Move ctor and assign. */
       if (!(special_functions & (1 << sfk_move_constructor)) &&
@@ -4011,6 +4021,8 @@ virtualize_constraint (tree requires_expr, tree proto_parm, tree dynamic_concept
         {
           dump_constructor (dynamic_concept, sfk_move_constructor, true);
           dump_assignment_operator (dynamic_concept, sfk_move_assignment, true);
+          // TODO
+          /* Generate converting move assignment template. */
         }
 
       dump_destructor (dynamic_concept);

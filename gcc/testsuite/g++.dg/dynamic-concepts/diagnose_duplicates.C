@@ -8,4 +8,4 @@ concept bool C () {
   };
 }
 
-any C c;
+any C c; // { dg-error "ISO C\\\+\\\+ forbids declaration of.*with no type" }
