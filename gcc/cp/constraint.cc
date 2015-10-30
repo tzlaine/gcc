@@ -3994,7 +3994,14 @@ virtualize_constraint (tree /*concept_decl*/, tree requires_expr, tree proto_par
       if (!(special_functions & (1 << sfk_constructor)) &&
           !(special_functions & (1 << sfk_copy_constructor)) &&
           !(special_functions & (1 << sfk_move_constructor)))
-        dump_constructor (dynamic_concept, sfk_constructor, true);
+        {
+          dump_constructor (dynamic_concept, sfk_constructor, true);
+#if 0
+          implicitly_declare_fn (sfk_constructor, dynamic_concept, /*const_p=*/false,
+                                 /*inherited_ctor=*/NULL_TREE, /*inherited_parms=*/NULL_TREE);
+          // TODO: Define body.
+#endif
+        }
 
       /* Copy ctor. */
       if (!(special_functions & (1 << sfk_copy_constructor)) &&
