@@ -3990,6 +3990,13 @@ virtualize_constraint (tree concept_decl, tree requires_expr, tree proto_parm, t
       finish_member_declaration (object_field);
       current_access_specifier = access_public_node;
 
+      TYPE_HAS_COMPLEX_DFLT (dynamic_concept) = true;
+      TYPE_HAS_COMPLEX_COPY_CTOR (dynamic_concept) = true;
+      TYPE_HAS_COMPLEX_MOVE_CTOR (dynamic_concept) = true;
+      TYPE_HAS_COMPLEX_COPY_ASSIGN (dynamic_concept) = true;
+      TYPE_HAS_COMPLEX_MOVE_ASSIGN (dynamic_concept) = true;
+      TYPE_HAS_NONTRIVIAL_DESTRUCTOR (dynamic_concept) = true;
+
       // TODO
       /* Generate converting ctor template that takes an object by value. */
 #if 1
@@ -4015,13 +4022,81 @@ virtualize_constraint (tree concept_decl, tree requires_expr, tree proto_parm, t
         dump_node (parameter_list, 0, stdout);
 
         tree arg_type = TREE_TYPE (TREE_VALUE (parameter_list));
+        tree parm_types = tree_cons (NULL_TREE, arg_type, void_list_node);
 
         dump_node (arg_type, 0, stdout);
 
 #if 0
-        cp_parser_template_declaration_after_parameters (parser, parameter_list,
-                                                         /*member_p*/=true);
+        implicitly_declare_fn (special_function_kind kind, tree type,
+                               bool const_p, tree inherited_ctor,
+                               tree inherited_parms);
 #endif
+        {
+#if 0
+          /* Because we create declarations for implicitly declared functions
+             lazily, we may be creating the declaration for a member of TYPE
+             while in some completely different context.  However, TYPE will
+             never be a dependent class (because we never want to do lookups
+             for implicitly defined functions in a dependent class).
+             Furthermore, we must set PROCESSING_TEMPLATE_DECL to zero here
+             because we only create clones for constructors and destructors
+             when not in a template.  */
+          gcc_assert (!dependent_type_p (type));
+          HOST_WIDE_INT saved_processing_template_decl = processing_template_decl;
+          processing_template_decl = 0;
+#endif
+
+          tree name = constructor_name (dynamic_concept);
+
+#if 0
+          synthesized_method_walk (dynamic_concept, kind, false, NULL_TREE, NULL_TREE,
+                                   NULL_TREE, NULL_TREE, false,
+                                   NULL_TREE, parms);
+#endif
+
+          /* Create the function.  */
+          tree fn_type = build_method_type_directly (dynamic_concept, void_type_node, parm_types);
+          tree fn = build_lang_decl (FUNCTION_DECL, name, fn_type);
+
+          DECL_CONSTRUCTOR_P (fn) = 1;
+  
+          /* Create the explicit arguments.  Note that this parameter is *not*
+             marked DECL_ARTIFICIAL; we want its type to be included in the
+             mangled function name.  */
+          {
+            tree decl = cp_build_parm_decl (NULL_TREE, arg_type);
+            TREE_READONLY (decl) = 1;
+            retrofit_lang_decl (decl);
+            DECL_PARM_INDEX (decl) = DECL_PARM_LEVEL (decl) = 1;
+            DECL_ARGUMENTS (fn) = decl;
+          }
+
+          /* Add the "this" parameter.  */
+          tree this_parm = build_this_parm (fn_type, TYPE_UNQUALIFIED);
+          DECL_CHAIN (this_parm) = DECL_ARGUMENTS (fn);
+          DECL_ARGUMENTS (fn) = this_parm;
+
+          grokclassfn (dynamic_concept, fn, NO_SPECIAL);
+          DECL_IN_AGGR_P (fn) = 1;
+          DECL_ARTIFICIAL (fn) = 1;
+
+          DECL_EXTERNAL (fn) = true;
+          DECL_NOT_REALLY_EXTERN (fn) = 1;
+          DECL_DECLARED_INLINE_P (fn) = 1;
+          set_linkage_according_to_type (dynamic_concept, fn);
+          if (TREE_PUBLIC (fn))
+            DECL_COMDAT (fn) = 1;
+          rest_of_decl_compilation (fn, toplevel_bindings_p (), at_eof);
+          gcc_assert (!TREE_USED (fn));
+
+#if 0
+          /* Restore PROCESSING_TEMPLATE_DECL.  */
+          processing_template_decl = saved_processing_template_decl;
+#endif
+
+          // TODO  return fn;
+        }
+
       }
 #endif
 
