@@ -6740,7 +6740,7 @@ extern void diagnose_constraints                (location_t, tree, tree);
 
 extern tree make_dynamic_concept_name		(tree, tree);
 extern tree begin_dynamic_concept_type		(tree);
-extern bool virtualize_constraint		(tree, tree, tree, tree);
+extern bool virtualize_constraint		(tree, tree, tree, tree, tree);
 
 /* in logic.cc */
 extern tree decompose_assumptions               (tree);

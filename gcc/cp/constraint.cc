@@ -3949,7 +3949,7 @@ virtualize_constraint_impl (int pass, tree t, tree proto_parm, tree dynamic_conc
 } /* namespace */
 
 bool
-virtualize_constraint (tree /*concept_decl*/, tree requires_expr, tree proto_parm, tree dynamic_concept)
+virtualize_constraint (tree concept_decl, tree requires_expr, tree proto_parm, tree dynamic_concept, tree partial_id_args)
 {
 #if 1
   virtualize_dump_file = fopen ("virtualize.out", "w"); // TODO
@@ -3984,8 +3984,46 @@ virtualize_constraint (tree /*concept_decl*/, tree requires_expr, tree proto_par
             }
       }
 
+      /* Add void* object pointer member. */
+      current_access_specifier = access_private_node;
+      tree object_field = build_decl (input_location, FIELD_DECL, get_identifier ("_Ptr"), ptr_type_node);
+      finish_member_declaration (object_field);
+      current_access_specifier = access_public_node;
+
       // TODO
       /* Generate converting ctor template that takes an object by value. */
+#if 1
+      {
+//        begin_template_parm_list ();
+
+        tree constr = build_constrained_parameter (concept_decl, proto_parm, partial_id_args);
+
+        tree synth_id = get_identifier ("_T");//make_generic_type_name ();
+        tree synth_tmpl_parm = finish_template_type_parm (class_type_node, synth_id);
+
+        // Attach the constraint to the parm before processing.
+        tree node = build_tree_list (NULL_TREE, synth_tmpl_parm);
+        TREE_TYPE (node) = constr;
+        tree parameter_list = process_template_parm (NULL_TREE,
+                                                     input_location,
+                                                     node,
+                                                     /*non_type=*/false,
+                                                     /*param_pack=*/false);
+
+//        end_template_parm_list (parameter_list);
+
+        dump_node (parameter_list, 0, stdout);
+
+        tree arg_type = TREE_TYPE (TREE_VALUE (parameter_list));
+
+        dump_node (arg_type, 0, stdout);
+
+#if 0
+        cp_parser_template_declaration_after_parameters (parser, parameter_list,
+                                                         /*member_p*/=true);
+#endif
+      }
+#endif
 
       // TODO
       /* Generate converting ctor template that takes an object by pointer. */
